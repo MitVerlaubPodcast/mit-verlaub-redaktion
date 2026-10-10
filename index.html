@@ -114,12 +114,23 @@
     .episode-card { border:1px solid #e7e7e7; border-radius:12px; padding:16px; margin-top:12px; }
     .episode-card h3 { margin-bottom:6px; }
     .episode-card .toolbar { margin-top:12px; }
-    .episode-story-row { border:1px solid #e7e7e7; border-radius:10px; padding:13px; margin-top:10px; }
+    .episode-story-group { border:1px solid #e3e3e3; border-radius:14px; padding:16px; margin:14px 0; background:#fff; }
+    .episode-story-group h3 { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:4px; }
+    .episode-story-group .group-subtitle { margin:0 0 10px; color:#777; font-size:13px; }
+    .episode-story-row { border:1px solid #e7e7e7; border-radius:10px; padding:12px; margin-top:9px; }
     .episode-story-row.archived-row { background:#f7f7f7; color:#666; }
     .episode-story-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .episode-story-head h3 { overflow-wrap:anywhere; }
-    .episode-story-controls { display:flex; align-items:center; gap:8px; margin-top:10px; }
+    .episode-story-title { border:0; padding:0; background:transparent; color:#222; font:inherit; font-weight:bold; text-align:left; cursor:pointer; }
+    .episode-story-title:hover { background:transparent; text-decoration:underline; }
+    .episode-story-controls { display:flex; align-items:center; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .episode-story-controls label { margin:0; }
     .episode-story-controls select { max-width:220px; }
+    .story-detail-backdrop { position:fixed; inset:0; z-index:20; background:#0009; display:flex; align-items:center; justify-content:center; padding:18px; }
+    .story-detail-modal { background:#fff; width:min(720px,100%); max-height:90vh; overflow:auto; border-radius:16px; padding:22px; box-shadow:0 12px 50px #0004; }
+    .story-detail-modal .detail-value { white-space:pre-wrap; overflow-wrap:anywhere; background:#f6f6f6; border-radius:8px; padding:10px 12px; margin:6px 0 14px; line-height:1.45; }
+    .story-detail-modal .detail-label { color:#666; font-size:12px; font-weight:bold; margin-top:12px; }
+    .story-detail-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
     .section-kicker { color:#777; text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:bold; margin:18px 0 4px; }
     .episode-form-grid { display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px; }
     .episode-bottom-actions { position:sticky; bottom:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px -22px -22px; padding:14px 22px; border-top:1px solid #e5e5e5; background:rgba(255,255,255,.97); backdrop-filter:blur(8px); border-radius:0 0 14px 14px; }
@@ -249,6 +260,20 @@
           <div class="episode-bottom-right">
             <button id="save-episode-button" class="secondary" type="button">Folge speichern</button>
             <button id="finalize-episode-button" class="publish-button" type="button" disabled>Folge veröffentlichen</button>
+          </div>
+        </div>
+        <div id="story-detail-backdrop" class="story-detail-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="story-detail-title">
+          <div class="story-detail-modal">
+            <div class="story-detail-top">
+              <div><div class="section-kicker" style="margin-top:0">Story-Details</div><h2 id="story-detail-title" style="margin-bottom:0">Story</h2></div>
+              <button id="close-story-detail" type="button" class="secondary">Schließen ✕</button>
+            </div>
+            <div class="detail-label">Vorschautext</div><div id="detail-description" class="detail-value"></div>
+            <div class="detail-label">Kategorie</div><div id="detail-category" class="detail-value"></div>
+            <div class="detail-label">Sprache</div><div id="detail-language" class="detail-value"></div>
+            <div class="detail-label">Notizen für die Aufnahme</div><div id="detail-notes" class="detail-value"></div>
+            <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
+            <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
           </div>
         </div>
       </section>
@@ -597,7 +622,7 @@
       updateStoryEpisodeOptions($('story-episode-select')?.value || '');
       const { data: links, error: linksError } = await db
         .from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,status,episode_number)');
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)');
       if (linksError) {
         $('episode-list').innerHTML = '<p class="empty">Die Folgen-Storys konnten nicht geladen werden: ' + escapeHTML(linksError.message) + '</p>';
         episodeLinks = [];
@@ -683,22 +708,34 @@
       const target = $('episode-story-list');
       const active = episodeLinkRows.filter(link => link.status !== 'archived');
       const archived = episodeLinkRows.filter(link => link.status === 'archived');
+      const mine = link => (link.story || stories.find(s => s.id === link.story_id) || {}).created_by === currentUser?.id;
       const renderRow = (link, isArchived) => {
         const story = link.story || stories.find(s => s.id === link.story_id) || {};
         const statusOptions = isArchived
           ? '<option value="archived" selected>Archiviert</option><option value="open">Wieder öffnen</option>'
           : '<option value="open" ' + (link.status === 'open' ? 'selected' : '') + '>Offen</option><option value="in_episode" ' + (link.status === 'in_episode' ? 'selected' : '') + '>In der Folge</option><option value="archived">Archivieren</option>';
-        return '<article class="episode-story-row ' + (isArchived ? 'archived-row' : '') + '"><div class="episode-story-head"><div><h3>' + escapeHTML(story.title || 'Story') + '</h3>' +
-          '<div class="pills"><span class="pill">' + escapeHTML(story.category || 'Sonstiges') + '</span><span class="pill">Story eingetragen von ' + escapeHTML(story.created_by_email || 'Redaktion') + '</span>' + (link.proposed_by_email && link.proposed_by_email !== story.created_by_email ? '<span class="pill">Zur Folge hinzugefügt von ' + escapeHTML(link.proposed_by_email) + '</span>' : '') + '</div>' +
-          (story.description ? '<p class="story-summary">' + escapeHTML(story.description) + '</p>' : '') +
-          (story.reddit_url ? '<a href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a>' : '') +
-          '</div><span class="pill ' + (link.status === 'in_episode' ? 'published' : isArchived ? 'planned' : '') + '">' + (link.status === 'in_episode' ? 'In der Folge' : isArchived ? 'Archiviert' : 'Offen') + '</span></div>' +
-          '<div class="episode-story-controls"><label style="margin:0;min-width:110px" for="link-status-' + link.id + '">Status für diese Folge</label><select id="link-status-' + link.id + '" data-link-status="' + link.id + '" ' + (activeEpisode.status === 'published' ? 'disabled' : '') + '>' + statusOptions + '</select>' +
-          (story.reddit_url ? '<a class="button-link" href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit öffnen</a>' : '') +
+        return '<article class="episode-story-row ' + (isArchived ? 'archived-row' : '') + '">' +
+          '<div class="episode-story-head"><div style="min-width:0"><h3><button type="button" class="episode-story-title" data-story-details="' + escapeHTML(link.story_id) + '">' + escapeHTML(story.title || 'Story') + '</button></h3>' +
+          '<div class="pills"><span class="pill">' + escapeHTML(story.category || 'Sonstiges') + '</span></div></div>' +
+          '<span class="pill ' + (link.status === 'in_episode' ? 'published' : isArchived ? 'planned' : '') + '">' + (link.status === 'in_episode' ? 'In der Folge' : isArchived ? 'Archiviert' : 'Offen') + '</span></div>' +
+          '<div class="episode-story-controls"><label for="link-status-' + link.id + '">Status</label><select id="link-status-' + link.id + '" data-link-status="' + link.id + '" ' + (activeEpisode.status === 'published' ? 'disabled' : '') + '>' + statusOptions + '</select>' +
+          (story.reddit_url ? '<a class="button-link" href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit öffnen ↗</a>' : '') +
           (activeEpisode.status !== 'published' ? '<button type="button" class="danger" data-remove-episode-story="' + escapeHTML(link.id) + '">Aus Folge entfernen</button>' : '') + '</div></article>';
       };
-      target.innerHTML = (active.length ? '<div class="section-kicker">Aktuelle Auswahl</div>' + active.map(link => renderRow(link, false)).join('') : '<p class="empty">Noch keine aktiven Storys in dieser Folge. Füge unten Storys aus der Gesamtdatenbank hinzu.</p>') +
-        (archived.length ? '<div class="section-kicker">Für diese Folge archiviert (' + archived.length + ')</div>' + archived.map(link => renderRow(link, true)).join('') : '');
+      const renderGroup = (title, subtitle, links, isArchived = false) =>
+        '<section class="episode-story-group"><h3>' + title + '<span class="pill">' + links.length + '</span></h3><p class="group-subtitle">' + subtitle + '</p>' +
+        (links.length ? links.map(link => renderRow(link, isArchived)).join('') : '<p class="empty">Noch keine Storys in diesem Bereich.</p>') + '</section>';
+      const myActive = active.filter(mine);
+      const otherActive = active.filter(link => !mine(link));
+      const myArchived = archived.filter(mine);
+      const otherArchived = archived.filter(link => !mine(link));
+      target.innerHTML = '<div class="section-kicker">Für die Aufnahme</div>' +
+        renderGroup('Deine Storys', 'Storys, die du selbst eingetragen hast', myActive) +
+        renderGroup('Storys von Rahel', 'Storys, die Rahel eingetragen hat', otherActive) +
+        ((myArchived.length || otherArchived.length) ?
+          '<div class="section-kicker">Archivierte Storys</div>' +
+          renderGroup('Deine archivierten Storys', 'Nicht für die Aufnahme ausgewählt', myArchived, true) +
+          renderGroup('Rahels archivierte Storys', 'Nicht für die Aufnahme ausgewählt', otherArchived, true) : '');
       updateAddStoryOptions();
       const finalized = episodeLinkRows.length > 0 && episodeLinkRows.every(link => link.status !== 'open');
       const hasSelected = episodeLinkRows.some(link => link.status === 'in_episode');
@@ -723,9 +760,35 @@
       }
     }
 
+    function openStoryDetails(storyId) {
+      const link = episodeLinkRows.find(row => row.story_id === storyId);
+      const story = link?.story || stories.find(item => item.id === storyId);
+      if (!story) return;
+      $('story-detail-title').textContent = story.title || 'Story';
+      $('detail-description').textContent = story.description || 'Kein Vorschautext hinterlegt.';
+      $('detail-category').textContent = story.category || 'Sonstiges';
+      $('detail-language').textContent = story.language === 'en' ? 'Englisch' : story.language === 'de' ? 'Deutsch' : 'Andere Sprache';
+      $('detail-notes').textContent = story.notes || 'Keine Notizen für die Aufnahme hinterlegt.';
+      $('detail-reddit').replaceChildren();
+      if (story.reddit_url) {
+        const anchor = document.createElement('a');
+        anchor.href = story.reddit_url;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.textContent = story.reddit_url;
+        $('detail-reddit').append(anchor);
+      } else {
+        $('detail-reddit').textContent = 'Kein Reddit-Link hinterlegt.';
+      }
+      const author = story.created_by_email || (story.created_by === currentUser?.id ? currentUser?.email : 'Rahel');
+      $('detail-author').textContent = author || 'Unbekannt';
+      $('story-detail-backdrop').classList.remove('hidden');
+    }
+
+
     async function loadEpisodeWorkspace() {
       const { data, error } = await db.from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,status,episode_number)')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)')
         .eq('episode_id', activeEpisode.id).order('position', { ascending: true }).order('created_at', { ascending: true });
       if (error) { showMessage('Storys dieser Folge konnten nicht geladen werden: ' + error.message, 'error'); return; }
       episodeLinkRows = (data || []).map(link => ({
@@ -808,6 +871,13 @@
     $('save-episode-button').addEventListener('click', () => $('episode-form').requestSubmit());
 
     $('add-story-search').addEventListener('input', updateAddStoryOptions);
+    $('close-story-detail').addEventListener('click', () => $('story-detail-backdrop').classList.add('hidden'));
+    $('story-detail-backdrop').addEventListener('click', event => {
+      if (event.target === $('story-detail-backdrop')) $('story-detail-backdrop').classList.add('hidden');
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') $('story-detail-backdrop').classList.add('hidden');
+    });
 
     $('delete-episode-button').addEventListener('click', async () => {
       if (!activeEpisode) return;
@@ -845,6 +915,11 @@
     });
 
     $('episode-story-list').addEventListener('click', async event => {
+      const detailButton = event.target.closest('[data-story-details]');
+      if (detailButton) {
+        openStoryDetails(detailButton.dataset.storyDetails);
+        return;
+      }
       const button = event.target.closest('[data-remove-episode-story]');
       if (!button || !activeEpisode || activeEpisode.status === 'published') return;
       const linkId = button.dataset.removeEpisodeStory;
