@@ -74,7 +74,7 @@ SELECT
   s.id,
   CASE WHEN s.status = 'published' THEN 'in_episode' ELSE 'open' END,
   s.created_by,
-  s.created_by_email,
+  (SELECT u.email FROM auth.users u WHERE u.id = s.created_by),
   COALESCE(s.created_at, now()),
   COALESCE(s.updated_at, now())
 FROM public.stories s
