@@ -208,17 +208,14 @@
             <p id="signed-in" class="muted" style="margin:0"></p>
           </div>
           <div class="toolbar" style="flex:0 0 auto">
-            <button id="new-episode-button" type="button">+ Folge erstellen</button>
-            <button id="new-story-button" class="secondary" type="button">+ Story anlegen</button>
+            <button id="new-story-button" type="button">+ Story anlegen</button>
+            <button id="new-episode-button" class="secondary" type="button">+ Folge erstellen</button>
+            <button id="show-episodes-tab" class="secondary" type="button">Folgen bearbeiten</button>
             <button id="refresh-button" class="secondary" type="button">Aktualisieren</button>
           </div>
         </div>
-        <div class="nav-tabs">
-          <button type="button" class="secondary active" id="show-episodes-tab">Folgen</button>
-          <button type="button" class="secondary" id="show-database-tab">Story-Datenbank</button>
-        </div>
       </div>
-      <section class="card" id="episode-list-card">
+      <section class="card hidden" id="episode-list-card">
         <div class="topbar"><div><h2 style="margin-bottom:5px">Folgen</h2><p class="muted" style="margin:0">Storys auswählen, Aufnahme vorbereiten und Folgen abschließen.</p></div></div>
         <div id="episode-list"><p class="empty">Folgen werden geladen …</p></div>
       </section>
@@ -307,9 +304,9 @@
         </form>
       </section>
 
-      <section class="card hidden" id="story-list-card">
-        <h2>Story-Datenbank</h2>
-        <p class="muted">Alle gesammelten Storys bleiben hier erhalten – auch wenn sie für eine Folge archiviert wurden.</p>
+      <section class="card" id="story-list-card">
+        <h2>Story-Archiv</h2>
+        <p class="muted">Alle Storys bleiben dauerhaft erhalten. Eine Folgenzuordnung ändert oder löscht die Story selbst nicht.</p>
         <div class="toolbar">
           <input id="search-filter" type="search" placeholder="Titel oder Reddit-Link suchen">
           <select id="history-filter" aria-label="Nach Folgenverlauf filtern">
@@ -460,22 +457,31 @@
       if (!filtered.length) { list.innerHTML = '<p class="empty">Keine passenden Storys gefunden.</p>'; return; }
       list.innerHTML = filtered.map(s => {
         const links = episodeLinks.filter(link => link.story_id === s.id);
-        const used = links.find(link => link.status === 'in_episode' && link.episode && link.episode.status === 'published');
-        const archived = links.some(link => link.status === 'archived');
-        const episodeLabel = used ? 'Folge ' + used.episode.episode_number : (s.episode_number ? 'Folge ' + s.episode_number : '');
-        const stateLabel = used ? 'In Folge verwendet' : archived ? 'Mindestens einmal archiviert' : 'Noch nie verwendet';
-        const stateClass = used ? 'published' : archived ? 'planned' : '';
+        const currentLink = links.find(link => link.episode && link.episode.status !== 'published');
+        const publishedLink = links.find(link => link.episode && link.episode.status === 'published' && link.status === 'in_episode');
+        const episodeLabel = publishedLink ? 'Veröffentlicht in Folge ' + publishedLink.episode.episode_number :
+          currentLink ? 'Folge ' + currentLink.episode.episode_number :
+          (s.episode_number ? 'Folge ' + s.episode_number + ' (Altbestand)' : 'Keine Folge zugeordnet');
+        const stateLabel = publishedLink ? 'Veröffentlicht' : currentLink ? (currentLink.status === 'archived' ? 'In Folge archiviert' : currentLink.status === 'in_episode' ? 'Für Folge ausgewählt' : 'Folge in Vorbereitung') : 'Im Archiv';
+        const stateClass = publishedLink ? 'published' : currentLink ? 'planned' : '';
+        const canAssign = !publishedLink && episodes.some(ep => ep.status !== 'published');
+        const options = episodes.filter(ep => ep.status !== 'published').map(ep =>
+          '<option value="' + escapeHTML(ep.id) + '"' + (currentLink && currentLink.episode_id === ep.id ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</option>'
+        ).join('');
         return '<article class="story" data-edit="' + escapeHTML(s.id) + '">' +
           '<div class="topbar"><div style="min-width:0"><h3>' + escapeHTML(s.title) + '</h3><div class="pills">' +
           '<span class="pill ' + stateClass + '">' + stateLabel + '</span>' +
           '<span class="pill">' + escapeHTML(s.category || 'Sonstiges') + '</span>' +
           '<span class="pill">' + (s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache') + '</span>' +
-          (episodeLabel ? '<span class="pill">' + escapeHTML(episodeLabel) + '</span>' : '') +
-          '</div></div></div>' +
+          '<span class="pill">' + escapeHTML(episodeLabel) + '</span></div></div></div>' +
           (s.description ? '<p class="story-summary">' + escapeHTML(s.description) + '</p>' : '') +
+          (s.reddit_url ? '<p class="story-meta"><a href="' + escapeHTML(s.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a></p>' : '') +
           '<div class="story-meta">Vorgeschlagen von: ' + escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt')) + '</div>' +
-          '<div class="story-actions"><button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button>' +
-          '<button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div></article>';
+          '<div class="story-actions">' +
+          (canAssign ? '<button type="button" class="secondary" data-toggle-assignment="' + escapeHTML(s.id) + '">' + (currentLink ? 'Folge ändern' : 'Folge zuordnen') + '</button>' : publishedLink ? '<span class="muted">Bereits veröffentlicht – Zuordnung bleibt erhalten.</span>' : '<span class="muted">Erstelle zuerst eine Folge, um sie zuzuordnen.</span>') +
+          '<button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button><button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div>' +
+          (canAssign ? '<div class="assignment-panel hidden" data-assignment-panel="' + escapeHTML(s.id) + '" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px"><label for="assign-search-' + escapeHTML(s.id) + '">Folge suchen</label><input id="assign-search-' + escapeHTML(s.id) + '" type="search" data-assignment-search="' + escapeHTML(s.id) + '" placeholder="Folgenummer oder Titel eingeben" style="margin:6px 0 10px"><label for="assign-select-' + escapeHTML(s.id) + '">Folge auswählen</label><select id="assign-select-' + escapeHTML(s.id) + '" data-assignment-select="' + escapeHTML(s.id) + '" style="margin:6px 0 10px"><option value="">Folge auswählen …</option>' + options + '</select><div class="story-actions"><button type="button" data-assign-story="' + escapeHTML(s.id) + '">Zuordnung speichern</button><button type="button" class="secondary" data-cancel-assignment="' + escapeHTML(s.id) + '">Abbrechen</button></div></div>' : '') +
+          '</article>';
       }).join('');
     }
 
@@ -553,8 +559,7 @@
       $('editor-card').classList.add('hidden');
       $('story-list-card').classList.toggle('hidden', tab !== 'database');
       $('show-episodes-tab').classList.toggle('active', tab === 'episodes');
-      $('show-database-tab').classList.toggle('active', tab === 'database');
-      $('new-story-button').classList.toggle('hidden', tab !== 'database');
+      $('new-story-button').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -846,7 +851,6 @@
     $('new-episode-button').addEventListener('click', createEpisode);
     $('episode-back-button').addEventListener('click', async () => { await loadEpisodes(); showHomeView('episodes'); });
     $('show-episodes-tab').addEventListener('click', () => showHomeView('episodes'));
-    $('show-database-tab').addEventListener('click', () => showHomeView('database'));
 
     async function loadAll() {
       if (!currentUser) return;
@@ -985,11 +989,62 @@
       showListView();
     });
 
+    $('story-list').addEventListener('input', event => {
+      const search = event.target.closest('[data-assignment-search]');
+      if (!search) return;
+      const storyId = search.dataset.assignmentSearch;
+      const select = $('story-list').querySelector('[data-assignment-select="' + storyId + '"]');
+      if (!select) return;
+      const q = search.value.trim().toLowerCase();
+      const selected = select.value;
+      const matches = episodes.filter(ep => ep.status !== 'published' &&
+        (!q || String(ep.episode_number).includes(q) || (ep.title || '').toLowerCase().includes(q)));
+      select.innerHTML = '<option value="">Folge auswählen …</option>' + matches.map(ep =>
+        '<option value="' + escapeHTML(ep.id) + '"' + (ep.id === selected ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</option>'
+      ).join('');
+    });
+
     $('story-list').addEventListener('click', async (event) => {
       const publishButton = event.target.closest('[data-publish]');
       const editButton = event.target.closest('[data-edit-button]');
       const deleteButton = event.target.closest('[data-delete]');
       const storyCard = event.target.closest('[data-edit]');
+      const assignButton = event.target.closest('[data-assign-story]');
+      const toggleAssignment = event.target.closest('[data-toggle-assignment]');
+      const cancelAssignment = event.target.closest('[data-cancel-assignment]');
+
+      if (toggleAssignment || cancelAssignment) {
+        event.stopPropagation();
+        const id = toggleAssignment ? toggleAssignment.dataset.toggleAssignment : cancelAssignment.dataset.cancelAssignment;
+        const panel = $('story-list').querySelector('[data-assignment-panel="' + id + '"]');
+        if (panel) panel.classList.toggle('hidden', !!cancelAssignment);
+        return;
+      }
+      if (assignButton) {
+        event.stopPropagation();
+        const storyId = assignButton.dataset.assignStory;
+        const select = $('story-list').querySelector('[data-assignment-select="' + storyId + '"]');
+        const episodeId = select?.value;
+        if (!episodeId) return showMessage('Bitte zuerst eine Folge auswählen.', 'error');
+        const story = stories.find(item => item.id === storyId);
+        const episode = episodes.find(item => item.id === episodeId);
+        if (!story || !episode || episode.status === 'published') return showMessage('Diese Folge kann nicht mehr zugeordnet werden.', 'error');
+        const published = episodeLinks.find(link => link.story_id === storyId && link.episode && link.episode.status === 'published' && link.status === 'in_episode');
+        if (published) return showMessage('Diese Story wurde bereits veröffentlicht und bleibt ihrer veröffentlichten Folge zugeordnet.', 'error');
+        assignButton.disabled = true;
+        const prior = episodeLinks.find(link => link.story_id === storyId && link.episode && link.episode.status !== 'published');
+        const result = prior
+          ? await db.from('episode_stories').update({ episode_id: episodeId, status: 'open', updated_at: new Date().toISOString() }).eq('id', prior.id)
+          : await db.from('episode_stories').insert({ episode_id: episodeId, story_id: storyId, status: 'open', proposed_by: currentUser.id, proposed_by_email: currentUser.email, position: 0 });
+        if (result.error) {
+          assignButton.disabled = false;
+          return showMessage('Folge konnte nicht zugeordnet werden: ' + result.error.message, 'error');
+        }
+        await loadAll();
+        showHomeView('database');
+        showMessage('Story wurde Folge ' + episode.episode_number + ' zugeordnet. Die Story bleibt dauerhaft im Archiv.');
+        return;
+      }
 
       if (editButton) {
         event.stopPropagation();
