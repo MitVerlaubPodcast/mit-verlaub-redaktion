@@ -631,7 +631,7 @@
           ? '<option value="archived" selected>Archiviert</option><option value="open">Wieder öffnen</option>'
           : '<option value="open" ' + (link.status === 'open' ? 'selected' : '') + '>Offen</option><option value="in_episode" ' + (link.status === 'in_episode' ? 'selected' : '') + '>In der Folge</option><option value="archived">Archivieren</option>';
         return '<article class="episode-story-row ' + (isArchived ? 'archived-row' : '') + '"><div class="episode-story-head"><div><h3>' + escapeHTML(story.title || 'Story') + '</h3>' +
-          '<div class="pills"><span class="pill">' + escapeHTML(story.category || 'Sonstiges') + '</span><span class="pill">' + escapeHTML(link.proposed_by_email || story.created_by_email || 'Redaktion') + ' vorgeschlagen</span></div>' +
+          '<div class="pills"><span class="pill">' + escapeHTML(story.category || 'Sonstiges') + '</span><span class="pill">Story eingetragen von ' + escapeHTML(story.created_by_email || 'Redaktion') + '</span>' + (link.proposed_by_email && link.proposed_by_email !== story.created_by_email ? '<span class="pill">Zur Folge hinzugefügt von ' + escapeHTML(link.proposed_by_email) + '</span>' : '') + '</div>' +
           (story.description ? '<p class="story-summary">' + escapeHTML(story.description) + '</p>' : '') +
           (story.reddit_url ? '<a href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a>' : '') +
           '</div><span class="pill ' + (link.status === 'in_episode' ? 'published' : isArchived ? 'planned' : '') + '">' + (link.status === 'in_episode' ? 'In der Folge' : isArchived ? 'Archiviert' : 'Offen') + '</span></div>' +
@@ -861,7 +861,6 @@
       }
 
       const id = $('story-id').value;
-      const rawEpisode = $('story-episode').value.trim();
       const url = $('story-url').value.trim();
 
       try {
@@ -876,7 +875,6 @@
         return;
       }
 
-      const status = $('story-status').value;
       const payload = {
         title: $('story-title').value.trim(),
         reddit_url: url,
@@ -899,12 +897,6 @@
         showMessage('Bitte einen Titel eingeben.', 'error');
         return;
       }
-      if (payload.episode_number !== null &&
-          (!Number.isInteger(payload.episode_number) || payload.episode_number < 1)) {
-        showMessage('Die Episodennummer muss eine positive ganze Zahl sein.', 'error');
-        return;
-      }
-
       const button = $('save-button');
       button.disabled = true;
       button.textContent = 'Wird gespeichert …';
