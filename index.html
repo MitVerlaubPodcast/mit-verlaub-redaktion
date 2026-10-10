@@ -78,7 +78,8 @@
     .story { border: 1px solid #e7e7e7; border-radius: 12px; padding: 13px 16px; margin-top: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
     .story:hover { border-color: #999; background: #fcfcfc; }
     .story h3 { margin-bottom: 0; }
-    .story-actions { display: none; }
+    .story-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .story-actions button { font-size: 13px; padding: 7px 10px; }
     .story p { line-height: 1.45; overflow-wrap: anywhere; }
     .pills { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
     .pill { display: inline-block; background: #eee; color: #333; padding: 5px 9px; border-radius: 20px; font-size: 12px; }
@@ -315,23 +316,22 @@
       list.innerHTML = filtered.map(s => {
         const statusClass = ['planned', 'recorded', 'published'].includes(s.status)
           ? s.status : '';
-        const approved = s.approved_for_website;
+        const statusLabel = s.status === 'planned' ? 'In Planung' : (statusNames[s.status] || s.status);
         return `
-          <article class="story">
-            <h3>${escapeHTML(s.title)}</h3>
-            <div class="pills">
-              <span class="pill ${statusClass}">${escapeHTML(statusNames[s.status] || s.status)}</span>
-              <span class="pill">${escapeHTML(s.category)}</span>
-              <span class="pill">${s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache'}</span>
-              ${s.episode_number ? `<span class="pill">Folge ${escapeHTML(s.episode_number)}</span>` : ''}
-              <span class="pill ${approved && s.status === 'published' ? 'published' : ''}">
-                ${approved ? 'Website freigegeben' : 'Nicht freigegeben'}
-              </span>
+          <article class="story" data-edit="${escapeHTML(s.id)}" tabindex="0" role="button" aria-label="Story bearbeiten: ${escapeHTML(s.title)}">
+            <div class="topbar">
+              <div style="min-width:0">
+                <h3>${escapeHTML(s.title)}</h3>
+                <div class="pills">
+                  <span class="pill ${statusClass}">${escapeHTML(statusLabel)}</span>
+                  <span class="pill">${escapeHTML(s.category)}</span>
+                  <span class="pill">${s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache'}</span>
+                  ${s.episode_number ? `<span class="pill">Folge ${escapeHTML(s.episode_number)}</span>` : ''}
+                </div>
+              </div>
+              <span class="muted" aria-hidden="true">Bearbeiten ›</span>
             </div>
-            <p><a href="${escapeHTML(s.reddit_url)}" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a></p>
-            ${s.notes ? `<p>${escapeHTML(s.notes).replace(/\n/g, '<br>')}</p>` : ''}
             <div class="story-actions">
-              <button type="button" data-edit="${escapeHTML(s.id)}">Bearbeiten</button>
               <button type="button" class="danger" data-delete="${escapeHTML(s.id)}">Löschen</button>
             </div>
           </article>`;
@@ -510,6 +510,7 @@
 
       resetForm();
       await loadStories();
+      showListView();
       showMessage(id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.');
     });
 
@@ -533,13 +534,8 @@
     });
 
     $('story-list').addEventListener('click', async (event) => {
-      const storyCard = event.target.closest('[data-edit]');
       const deleteButton = event.target.closest('[data-delete]');
-
-      if (storyCard) {
-        startEdit(storyCard.dataset.edit);
-        return;
-      }
+      const storyCard = event.target.closest('[data-edit]');
 
       if (deleteButton) {
         const story = stories.find(s => s.id === deleteButton.dataset.delete);
@@ -554,7 +550,10 @@
         if ($('story-id').value === story.id) resetForm();
         await loadStories();
         showMessage('Story gelöscht.');
+        return;
       }
+
+      if (storyCard) startEdit(storyCard.dataset.edit);
     });
 
     ['search-filter', 'status-filter', 'category-filter'].forEach(id => {
