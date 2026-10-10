@@ -192,8 +192,8 @@
             <input id="story-title" maxlength="250" required placeholder="Worum geht es in der Story?">
           </div>
           <div class="field">
-            <label for="story-description">Kurzbeschreibung</label>
-            <textarea id="story-description" maxlength="600" placeholder="Kurzbeschreibung die auf Der Website angezeigt werden soll"></textarea>
+            <label for="story-description">Vorschautext für die Seite</label>
+            <textarea id="story-description" maxlength="600" placeholder="Kurze Erläuterung, was in der Story passiert"></textarea>
           </div>
           <div class="field">
             <label for="story-url">Reddit-Link *</label>
@@ -407,7 +407,6 @@
                   ${s.episode_number ? `<span class="pill">Folge ${escapeHTML(s.episode_number)}</span>` : ''}
                 </div>
               </div>
-              <span class="muted" aria-hidden="true">Bearbeiten ›</span>
             </div>
             ${s.description ? `<p class="story-summary">${escapeHTML(s.description)}</p>` : ''}
             <div class="story-meta">Angelegt von: ${escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt'))}</div>
@@ -473,12 +472,14 @@
       $('story-id').value = s.id;
       $('story-title').value = s.title || '';
       $('story-url').value = s.reddit_url || '';
-      $('story-description').value = s.description || '';
+      // Ältere Storys hatten den Vorschautext teilweise im Notizfeld gespeichert.
+      // Wenn noch keine Kurzbeschreibung existiert, übernehmen wir den alten Inhalt dorthin.
+      $('story-description').value = s.description || s.notes || '';
       $('story-category').value = s.category || 'Kurioses';
       $('story-language').value = s.language || 'de';
       $('story-episode').value = s.episode_number ?? '';
       $('story-status').value = s.status === 'recorded' ? 'recorded' : 'planned';
-      $('story-notes').value = s.notes || '';
+      $('story-notes').value = s.description ? (s.notes || '') : '';
       $('editor-heading').textContent = 'Story bearbeiten';
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
