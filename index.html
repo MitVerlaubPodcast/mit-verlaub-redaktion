@@ -529,6 +529,14 @@
       showListView();
     });
 
+    $('story-approved').addEventListener('change', (event) => {
+      if (!event.target.checked) return;
+      const confirmed = window.confirm(
+        'Achtung: Bitte gib diese Story nur für die öffentliche Website frei, wenn sie tatsächlich in einer bereits veröffentlichten Podcastfolge vorkam.\n\nWar die Story Teil einer veröffentlichten Folge?'
+      );
+      if (!confirmed) event.target.checked = false;
+    });
+
     $('cancel-edit').addEventListener('click', () => {
       resetForm();
       clearMessage();
