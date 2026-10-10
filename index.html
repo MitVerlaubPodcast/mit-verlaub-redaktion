@@ -550,7 +550,7 @@
       showEditorView();
     }
 
-    function showHomeView(tab = 'episodes') {
+    function showHomeView(tab = 'database') {
       activeEpisode = null;
       $('overview-card').classList.remove('hidden');
       $('stats-card').classList.remove('hidden');
@@ -654,7 +654,8 @@
           (story.reddit_url ? '<a href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a>' : '') +
           '</div><span class="pill ' + (link.status === 'in_episode' ? 'published' : isArchived ? 'planned' : '') + '">' + (link.status === 'in_episode' ? 'In der Folge' : isArchived ? 'Archiviert' : 'Offen') + '</span></div>' +
           '<div class="episode-story-controls"><label style="margin:0;min-width:110px" for="link-status-' + link.id + '">Status für diese Folge</label><select id="link-status-' + link.id + '" data-link-status="' + link.id + '" ' + (activeEpisode.status === 'published' ? 'disabled' : '') + '>' + statusOptions + '</select>' +
-          (story.reddit_url ? '<a class="button-link" href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit öffnen</a>' : '') + '</div></article>';
+          (story.reddit_url ? '<a class="button-link" href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit öffnen</a>' : '') +
+          (activeEpisode.status !== 'published' ? '<button type="button" class="danger" data-remove-episode-story="' + escapeHTML(link.id) + '">Aus Folge entfernen</button>' : '') + '</div></article>';
       };
       target.innerHTML = (active.length ? '<div class="section-kicker">Aktuelle Auswahl</div>' + active.map(link => renderRow(link, false)).join('') : '<p class="empty">Noch keine aktiven Storys in dieser Folge. Füge unten Storys aus der Gesamtdatenbank hinzu.</p>') +
         (archived.length ? '<div class="section-kicker">Für diese Folge archiviert (' + archived.length + ')</div>' + archived.map(link => renderRow(link, true)).join('') : '');
@@ -801,6 +802,24 @@
       await loadEpisodes();
       await loadEpisodeWorkspace();
       showMessage('Story zur Folge hinzugefügt' + (story?.created_by_email ? '. Vorgeschlagen von ' + story.created_by_email + '.' : '.'));
+    });
+
+    $('episode-story-list').addEventListener('click', async event => {
+      const button = event.target.closest('[data-remove-episode-story]');
+      if (!button || !activeEpisode || activeEpisode.status === 'published') return;
+      const linkId = button.dataset.removeEpisodeStory;
+      const link = episodeLinkRows.find(row => row.id === linkId);
+      if (!link) return;
+      if (!window.confirm('Story aus Folge ' + activeEpisode.episode_number + ' entfernen? Die Story bleibt im Story-Archiv erhalten.')) return;
+      button.disabled = true;
+      const { error } = await db.from('episode_stories').delete().eq('id', linkId);
+      if (error) {
+        button.disabled = false;
+        return showMessage('Story konnte nicht aus der Folge entfernt werden: ' + error.message, 'error');
+      }
+      await loadEpisodes();
+      await loadEpisodeWorkspace();
+      showMessage('Story aus der Folge entfernt. Sie bleibt im Story-Archiv erhalten.');
     });
 
     $('episode-story-list').addEventListener('change', async event => {
@@ -1120,7 +1139,7 @@
 
     const { data: { session } } = await db.auth.getSession();
     setLoggedIn(session?.user ?? null);
-    if (session?.user) { showHomeView('episodes'); await loadAll(); }
+    if (session?.user) { showHomeView('database'); await loadAll(); }
     loadNextPlannedEpisode();
   </script>
 </body>
