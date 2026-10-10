@@ -722,7 +722,8 @@
 
     function renderStoryPicker() {
       const available = getAvailableStories();
-      selectedStoryIds = new Set([...selectedStoryIds].filter(id => available.some(story => story.id === id)));
+      const alreadyAssigned = new Set(episodeLinkRows.map(link => link.story_id));
+      selectedStoryIds = new Set([...selectedStoryIds].filter(id => stories.some(story => story.id === id) && !alreadyAssigned.has(id)));
       $('story-picker-count').textContent = selectedStoryIds.size + ' Story' + (selectedStoryIds.size === 1 ? '' : 's') + ' ausgewählt';
       $('confirm-add-stories').disabled = !selectedStoryIds.size || activeEpisode?.status === 'published';
       $('story-picker-list').innerHTML = available.length ? available.map(story => {
@@ -954,7 +955,7 @@
         const { error } = await db.from('episode_stories').insert({
           episode_id: activeEpisode.id, story_id: storyId, status: 'open',
           proposed_by: currentUser.id, proposed_by_email: currentUser.email,
-          position: episodeLinkRows.length
+          position: episodeLinkRows.length + ids.indexOf(storyId)
         });
         if (error) {
           button.textContent = 'Erneut versuchen';
