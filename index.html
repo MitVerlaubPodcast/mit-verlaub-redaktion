@@ -730,12 +730,12 @@
       const myArchived = archived.filter(mine);
       const otherArchived = archived.filter(link => !mine(link));
       target.innerHTML = '<div class="section-kicker">Für die Aufnahme</div>' +
-        renderGroup('Deine Storys', 'Storys, die du selbst eingetragen hast', myActive) +
-        renderGroup('Storys von Rahel', 'Storys, die Rahel eingetragen hat', otherActive) +
+        renderGroup('Storys von Patrick', 'Von dir eingetragene Storys', myActive) +
+        renderGroup('Storys von Rahel', 'Von Rahel eingetragene Storys', otherActive) +
         ((myArchived.length || otherArchived.length) ?
           '<div class="section-kicker">Archivierte Storys</div>' +
-          renderGroup('Deine archivierten Storys', 'Nicht für die Aufnahme ausgewählt', myArchived, true) +
-          renderGroup('Rahels archivierte Storys', 'Nicht für die Aufnahme ausgewählt', otherArchived, true) : '');
+          renderGroup('Storys von Patrick', 'Archiviert – nicht für die Aufnahme ausgewählt', myArchived, true) +
+          renderGroup('Storys von Rahel', 'Archiviert – nicht für die Aufnahme ausgewählt', otherArchived, true) : '');
       updateAddStoryOptions();
       const finalized = episodeLinkRows.length > 0 && episodeLinkRows.every(link => link.status !== 'open');
       const hasSelected = episodeLinkRows.some(link => link.status === 'in_episode');
@@ -780,7 +780,7 @@
       } else {
         $('detail-reddit').textContent = 'Kein Reddit-Link hinterlegt.';
       }
-      const author = story.created_by_email || (story.created_by === currentUser?.id ? currentUser?.email : 'Rahel');
+      const author = story.created_by_email || (story.created_by === currentUser?.id ? 'Patrick' : 'Rahel');
       $('detail-author').textContent = author || 'Unbekannt';
       $('story-detail-backdrop').classList.remove('hidden');
     }
