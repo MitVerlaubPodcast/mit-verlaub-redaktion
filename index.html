@@ -572,7 +572,7 @@
       episodes = data || [];
       const { data: links, error: linksError } = await db
         .from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,created_by_email,status,episode_number)');
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,status,episode_number)');
       if (linksError) {
         $('episode-list').innerHTML = '<p class="empty">Die Folgen-Storys konnten nicht geladen werden: ' + escapeHTML(linksError.message) + '</p>';
         episodeLinks = [];
@@ -656,7 +656,7 @@
 
     async function loadEpisodeWorkspace() {
       const { data, error } = await db.from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,created_by_email,status,episode_number)')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,status,episode_number)')
         .eq('episode_id', activeEpisode.id).order('position', { ascending: true }).order('created_at', { ascending: true });
       if (error) { showMessage('Storys dieser Folge konnten nicht geladen werden: ' + error.message, 'error'); return; }
       episodeLinkRows = (data || []).map(link => ({
