@@ -102,6 +102,8 @@
     .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .stat { background: #f5f5f5; padding: 14px; border-radius: 10px; }
     .stat strong { display: block; font-size: 25px; margin-bottom: 4px; }
+    .next-episode { margin-top: 16px; padding: 14px; border-radius: 10px; background: #f5f5f5; line-height: 1.45; }
+    .next-episode strong { display: block; font-size: 15px; }
     .story-actions { display: flex; gap: 8px; flex-wrap: nowrap; margin-top: 12px; }
     .story-actions button { flex: 1 1 0; width: 0; min-width: 0; font-size: 13px; padding: 8px 8px; white-space: nowrap; }
     .empty { padding: 22px 0; color: #666; text-align: center; }
@@ -161,6 +163,10 @@
           <div class="stat"><strong id="stat-total">0</strong><span class="muted">Storys gesamt</span></div>
           <div class="stat"><strong id="stat-open">0</strong><span class="muted">Noch nicht veröffentlicht</span></div>
           <div class="stat"><strong id="stat-published">0</strong><span class="muted">Veröffentlicht</span></div>
+        </div>
+        <div class="next-episode">
+          <strong>Nächste geplante Folge:</strong>
+          <div id="next-episode-info" class="muted" style="margin-top:6px">Wird aus dem RSS-Feed geladen …</div>
         </div>
       </div>
 
@@ -320,6 +326,46 @@
       $('stat-total').textContent = stories.length;
       $('stat-open').textContent = stories.filter(s => s.status !== 'published').length;
       $('stat-published').textContent = stories.filter(s => s.status === 'published').length;
+    }
+
+    async function loadNextPlannedEpisode() {
+      const target = $('next-episode-info');
+      target.textContent = 'Wird aus dem RSS-Feed geladen …';
+      try {
+        // Apple lookup liefert die offizielle RSS-Adresse des Podcasts.
+        const lookupResponse = await fetch('https://itunes.apple.com/lookup?id=1725187632');
+        if (!lookupResponse.ok) throw new Error('Podcast-Feed konnte nicht gefunden werden.');
+        const lookup = await lookupResponse.json();
+        const feedUrl = lookup.results?.[0]?.feedUrl;
+        if (!feedUrl) throw new Error('RSS-Adresse fehlt.');
+
+        // RSS-zu-JSON-Dienst, da Podcast-Hosts RSS im Browser häufig nicht direkt freigeben.
+        const rssResponse = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl));
+        if (!rssResponse.ok) throw new Error('RSS-Feed ist gerade nicht erreichbar.');
+        const rss = await rssResponse.json();
+        if (rss.status !== 'ok' || !Array.isArray(rss.items)) throw new Error('RSS-Feed konnte nicht gelesen werden.');
+
+        const now = Date.now();
+        const upcoming = rss.items
+          .map(item => ({ item, date: new Date(item.pubDate).getTime() }))
+          .filter(entry => Number.isFinite(entry.date) && entry.date > now)
+          .sort((a, b) => a.date - b.date)[0];
+
+        if (!upcoming) {
+          target.textContent = 'Noch offen';
+          return;
+        }
+
+        const title = upcoming.item.title || 'Titel noch nicht eingetragen';
+        const date = new Intl.DateTimeFormat('de-DE', {
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        }).format(new Date(upcoming.date));
+        target.textContent = title + ' · Veröffentlichung: ' + date;
+      } catch (error) {
+        console.warn('Nächste geplante Podcastfolge konnte nicht geladen werden:', error);
+        target.textContent = 'Feed gerade nicht abrufbar';
+      }
     }
 
     function renderStories() {
@@ -653,6 +699,7 @@
     const { data: { session } } = await db.auth.getSession();
     setLoggedIn(session?.user ?? null);
     if (session?.user) { showListView(); await loadStories(); }
+    loadNextPlannedEpisode();
   </script>
 </body>
 </html>
