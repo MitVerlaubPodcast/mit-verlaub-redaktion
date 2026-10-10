@@ -158,6 +158,10 @@
             <input id="story-title" maxlength="250" required placeholder="Worum geht es in der Story?">
           </div>
           <div class="field">
+            <label for="story-description">Kurzbeschreibung</label>
+            <textarea id="story-description" maxlength="600" placeholder="Kurzbeschreibung die auf Der Website angezeigt werden soll"></textarea>
+          </div>
+          <div class="field">
             <label for="story-url">Reddit-Link *</label>
             <input id="story-url" type="url" required placeholder="https://www.reddit.com/r/...">
           </div>
@@ -390,6 +394,7 @@
       $('story-id').value = s.id;
       $('story-title').value = s.title || '';
       $('story-url').value = s.reddit_url || '';
+      $('story-description').value = s.description || '';
       $('story-category').value = s.category || 'Kurioses';
       $('story-language').value = s.language || 'de';
       $('story-episode').value = s.episode_number ?? '';
@@ -471,6 +476,7 @@
         category: $('story-category').value,
         language: $('story-language').value,
         episode_number: rawEpisode ? Number(rawEpisode) : null,
+        description: $('story-description').value.trim(),
         notes: $('story-notes').value.trim(),
         status,
         approved_for_website: $('story-approved').checked,
