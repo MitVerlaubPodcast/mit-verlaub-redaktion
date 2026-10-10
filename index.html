@@ -75,7 +75,10 @@
     .message { padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; white-space: pre-wrap; }
     .message.error { background: #fff0f0; color: #9b2020; }
     .message.success { background: #edf8ee; color: #23662b; }
-    .story { border: 1px solid #e7e7e7; border-radius: 12px; padding: 16px; margin-top: 12px; }
+    .story { border: 1px solid #e7e7e7; border-radius: 12px; padding: 13px 16px; margin-top: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
+    .story:hover { border-color: #999; background: #fcfcfc; }
+    .story h3 { margin-bottom: 0; }
+    .story-actions { display: none; }
     .story p { line-height: 1.45; overflow-wrap: anywhere; }
     .pills { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
     .pill { display: inline-block; background: #eee; color: #333; padding: 5px 9px; border-radius: 20px; font-size: 12px; }
@@ -133,6 +136,7 @@
             <p id="signed-in" class="muted" style="margin:0"></p>
           </div>
           <div class="toolbar" style="flex:0 0 auto">
+            <button id="new-story-button" type="button">+ Neue Story anlegen</button>
             <button id="refresh-button" class="secondary" type="button">Aktualisieren</button>
             <button id="logout-button" type="button">Abmelden</button>
           </div>
@@ -144,8 +148,8 @@
         </div>
       </div>
 
-      <section class="card" id="editor-card">
-        <h2 id="editor-heading">Neue Story anlegen</h2>
+      <section class="card hidden" id="editor-card">
+        <div class="topbar" style="margin-bottom:18px"><h2 id="editor-heading" style="margin:0">Neue Story anlegen</h2><button id="back-to-list" class="secondary" type="button">← Zurück zur Übersicht</button></div>
         <form id="story-form">
           <input id="story-id" type="hidden">
           <div class="field">
@@ -207,8 +211,8 @@
         </form>
       </section>
 
-      <section class="card">
-        <h2>Storys verwalten</h2>
+      <section class="card" id="story-list-card">
+        <h2>Alle Reddit-Storys</h2>
         <div class="toolbar">
           <input id="search-filter" type="search" placeholder="Titel oder Reddit-Link suchen">
           <select id="status-filter" aria-label="Nach Status filtern">
@@ -352,6 +356,20 @@
       renderStories();
     }
 
+    function showListView() {
+      $('editor-card').classList.add('hidden');
+      $('story-list-card').classList.remove('hidden');
+      $('new-story-button').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showEditorView() {
+      $('editor-card').classList.remove('hidden');
+      $('story-list-card').classList.add('hidden');
+      $('new-story-button').classList.add('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     function resetForm() {
       $('story-form').reset();
       $('story-id').value = '';
@@ -379,7 +397,7 @@
       $('editor-heading').textContent = 'Story bearbeiten';
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
-      $('editor-card').scrollIntoView({ behavior: 'smooth' });
+      showEditorView();
     }
 
     $('login-form').addEventListener('submit', async (event) => {
@@ -402,6 +420,7 @@
         return;
       }
       setLoggedIn(data.user);
+      showListView();
       await loadStories();
       showMessage('Du bist angemeldet.');
     });
@@ -494,14 +513,31 @@
       showMessage(id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.');
     });
 
-    $('cancel-edit').addEventListener('click', resetForm);
+    $('new-story-button').addEventListener('click', () => {
+      clearMessage();
+      resetForm();
+      showEditorView();
+      $('story-title').focus();
+    });
+
+    $('back-to-list').addEventListener('click', () => {
+      resetForm();
+      clearMessage();
+      showListView();
+    });
+
+    $('cancel-edit').addEventListener('click', () => {
+      resetForm();
+      clearMessage();
+      showListView();
+    });
 
     $('story-list').addEventListener('click', async (event) => {
-      const editButton = event.target.closest('[data-edit]');
+      const storyCard = event.target.closest('[data-edit]');
       const deleteButton = event.target.closest('[data-delete]');
 
-      if (editButton) {
-        startEdit(editButton.dataset.edit);
+      if (storyCard) {
+        startEdit(storyCard.dataset.edit);
         return;
       }
 
@@ -540,7 +576,7 @@
 
     const { data: { session } } = await db.auth.getSession();
     setLoggedIn(session?.user ?? null);
-    if (session?.user) await loadStories();
+    if (session?.user) { showListView(); await loadStories(); }
   </script>
 </body>
 </html>
