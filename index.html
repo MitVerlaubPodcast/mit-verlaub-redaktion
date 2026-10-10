@@ -1,0 +1,546 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111111">
+  <title>Mit Verlaub – Redaktion</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+    header {
+      background: #111;
+      color: white;
+      text-align: center;
+      padding: 28px 16px;
+    }
+    header h1 { margin: 0 0 8px; font-size: 34px; }
+    header p { margin: 0; color: #ccc; }
+    main { max-width: 1100px; margin: 28px auto; padding: 0 16px 40px; }
+    .card {
+      background: white;
+      padding: 22px;
+      border-radius: 16px;
+      box-shadow: 0 3px 14px #0000000c;
+      margin-bottom: 20px;
+    }
+    h2 { margin-top: 0; font-size: 22px; }
+    h3 { margin: 0 0 8px; font-size: 18px; }
+    label { display: block; font-weight: bold; font-size: 14px; margin: 0 0 6px; }
+    input, select, textarea {
+      width: 100%;
+      font: inherit;
+      font-size: 15px;
+      padding: 11px 12px;
+      border: 1px solid #d5d5d5;
+      border-radius: 8px;
+      background: white;
+      color: #222;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid #888;
+      outline-offset: 1px;
+    }
+    .field { margin-bottom: 15px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    button, .button-link {
+      border: 0;
+      border-radius: 8px;
+      padding: 11px 16px;
+      background: #111;
+      color: white;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button:hover, .button-link:hover { background: #333; }
+    button.secondary { background: #e9e9e9; color: #222; }
+    button.secondary:hover { background: #ddd; }
+    button.danger { background: #a12626; }
+    button:disabled { opacity: .55; cursor: wait; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .toolbar > * { flex: 1; min-width: 150px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .muted { color: #666; font-size: 14px; }
+    .hidden { display: none !important; }
+    .message { padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; white-space: pre-wrap; }
+    .message.error { background: #fff0f0; color: #9b2020; }
+    .message.success { background: #edf8ee; color: #23662b; }
+    .story { border: 1px solid #e7e7e7; border-radius: 12px; padding: 16px; margin-top: 12px; }
+    .story p { line-height: 1.45; overflow-wrap: anywhere; }
+    .pills { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
+    .pill { display: inline-block; background: #eee; color: #333; padding: 5px 9px; border-radius: 20px; font-size: 12px; }
+    .pill.published { background: #e2f4e5; color: #23662b; }
+    .pill.planned { background: #fff0d8; color: #79500b; }
+    .pill.recorded { background: #e5edff; color: #244a94; }
+    .checkline { display: flex; align-items: flex-start; gap: 10px; margin: 12px 0 18px; }
+    .checkline input { width: auto; margin-top: 3px; }
+    .checkline label { margin: 0; line-height: 1.4; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .stat { background: #f5f5f5; padding: 14px; border-radius: 10px; }
+    .stat strong { display: block; font-size: 25px; margin-bottom: 4px; }
+    .story-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .story-actions button { font-size: 14px; padding: 9px 12px; }
+    .empty { padding: 22px 0; color: #666; text-align: center; }
+    footer { text-align: center; padding: 0 16px 28px; color: #777; font-size: 12px; }
+    @media (max-width: 620px) {
+      header h1 { font-size: 28px; }
+      .grid, .stats { grid-template-columns: 1fr; }
+      .card { padding: 17px; }
+      main { margin-top: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mit Verlaub – Redaktion</h1>
+    <p>Die wildesten Reddit Storys aus dem Podcast</p>
+  </header>
+
+  <main>
+    <div id="message" class="message hidden" role="status"></div>
+
+    <section id="login-card" class="card">
+      <h2>Redaktion – Anmeldung</h2>
+      <p class="muted">Melde dich mit deinem Redaktionskonto an.</p>
+      <form id="login-form">
+        <div class="field">
+          <label for="login-email">E-Mail-Adresse</label>
+          <input id="login-email" type="email" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Passwort</label>
+          <input id="login-password" type="password" autocomplete="current-password" required>
+        </div>
+        <button id="login-button" type="submit">Anmelden</button>
+      </form>
+    </section>
+
+    <section id="app" class="hidden">
+      <div class="card">
+        <div class="topbar">
+          <div>
+            <h2 style="margin-bottom:5px">Redaktionsübersicht</h2>
+            <p id="signed-in" class="muted" style="margin:0"></p>
+          </div>
+          <div class="toolbar" style="flex:0 0 auto">
+            <button id="refresh-button" class="secondary" type="button">Aktualisieren</button>
+            <button id="logout-button" type="button">Abmelden</button>
+          </div>
+        </div>
+        <div class="stats" style="margin-top:20px">
+          <div class="stat"><strong id="stat-total">0</strong><span class="muted">Storys gesamt</span></div>
+          <div class="stat"><strong id="stat-open">0</strong><span class="muted">Noch nicht veröffentlicht</span></div>
+          <div class="stat"><strong id="stat-published">0</strong><span class="muted">Veröffentlicht</span></div>
+        </div>
+      </div>
+
+      <section class="card" id="editor-card">
+        <h2 id="editor-heading">Neue Story anlegen</h2>
+        <form id="story-form">
+          <input id="story-id" type="hidden">
+          <div class="field">
+            <label for="story-title">Titel der Story *</label>
+            <input id="story-title" maxlength="250" required placeholder="Worum geht es in der Story?">
+          </div>
+          <div class="field">
+            <label for="story-url">Reddit-Link *</label>
+            <input id="story-url" type="url" required placeholder="https://www.reddit.com/r/...">
+          </div>
+          <div class="grid">
+            <div class="field">
+              <label for="story-category">Kategorie</label>
+              <select id="story-category">
+                <option>Bin ich das Arschloch?</option>
+                <option>Beziehungen</option>
+                <option>Beichtstuhl</option>
+                <option>Rachegeschichten</option>
+                <option>Kurioses</option>
+                <option>Familie</option>
+                <option>Arbeit</option>
+                <option>Sonstiges</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="story-language">Sprache der Originalstory</label>
+              <select id="story-language">
+                <option value="de">Deutsch</option>
+                <option value="en">Englisch</option>
+                <option value="other">Andere</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="story-episode">Episodennummer</label>
+              <input id="story-episode" type="number" min="1" step="1" placeholder="z. B. 84">
+            </div>
+            <div class="field">
+              <label for="story-status">Status</label>
+              <select id="story-status">
+                <option value="draft">Entwurf</option>
+                <option value="planned">Geplant</option>
+                <option value="recorded">Aufgenommen</option>
+                <option value="published">Veröffentlicht</option>
+              </select>
+            </div>
+          </div>
+          <div class="field">
+            <label for="story-notes">Notizen für die Aufnahme</label>
+            <textarea id="story-notes" placeholder="Zusammenfassung, wichtige Details, Gesprächsfragen …"></textarea>
+          </div>
+          <div class="checkline">
+            <input id="story-approved" type="checkbox">
+            <label for="story-approved">Für die öffentliche Website freigeben. Nur veröffentlichte und freigegebene Storys werden dort angezeigt.</label>
+          </div>
+          <div class="toolbar">
+            <button id="save-button" type="submit">Story speichern</button>
+            <button id="cancel-edit" class="secondary hidden" type="button">Bearbeitung abbrechen</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Storys verwalten</h2>
+        <div class="toolbar">
+          <input id="search-filter" type="search" placeholder="Titel oder Reddit-Link suchen">
+          <select id="status-filter" aria-label="Nach Status filtern">
+            <option value="">Alle Status</option>
+            <option value="draft">Entwurf</option>
+            <option value="planned">Geplant</option>
+            <option value="recorded">Aufgenommen</option>
+            <option value="published">Veröffentlicht</option>
+          </select>
+          <select id="category-filter" aria-label="Nach Kategorie filtern">
+            <option value="">Alle Kategorien</option>
+            <option>Bin ich das Arschloch?</option>
+            <option>Beziehungen</option>
+            <option>Beichtstuhl</option>
+            <option>Rachegeschichten</option>
+            <option>Kurioses</option>
+            <option>Familie</option>
+            <option>Arbeit</option>
+            <option>Sonstiges</option>
+          </select>
+        </div>
+        <div id="story-list"><p class="empty">Storys werden geladen …</p></div>
+      </section>
+    </section>
+  </main>
+
+  <footer>Mit Verlaub – interne Redaktionsoberfläche</footer>
+
+  <script type="module">
+    import { createClient } from
+      'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+    const SUPABASE_URL = 'https://aabwjvqfelqjclfqxhhs.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_gQfgbLPNQimxEX4pGDRicQ_f_8MCcrq';
+
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+    const $ = (id) => document.getElementById(id);
+    let stories = [];
+    let currentUser = null;
+
+    const statusNames = {
+      draft: 'Entwurf',
+      planned: 'Geplant',
+      recorded: 'Aufgenommen',
+      published: 'Veröffentlicht'
+    };
+
+    function escapeHTML(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;',
+        '"': '&quot;', "'": '&#39;'
+      })[char]);
+    }
+
+    function showMessage(text, type = 'success') {
+      const box = $('message');
+      box.textContent = text;
+      box.className = `message ${type}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function clearMessage() {
+      $('message').className = 'message hidden';
+      $('message').textContent = '';
+    }
+
+    function setLoggedIn(user) {
+      currentUser = user;
+      $('login-card').classList.toggle('hidden', !!user);
+      $('app').classList.toggle('hidden', !user);
+      $('signed-in').textContent = user ? `Angemeldet: ${user.email}` : '';
+    }
+
+    function updateStats() {
+      $('stat-total').textContent = stories.length;
+      $('stat-open').textContent = stories.filter(s => s.status !== 'published').length;
+      $('stat-published').textContent = stories.filter(s => s.status === 'published').length;
+    }
+
+    function renderStories() {
+      const query = $('search-filter').value.trim().toLowerCase();
+      const status = $('status-filter').value;
+      const category = $('category-filter').value;
+
+      const filtered = stories.filter(s => {
+        const matchesQuery = !query ||
+          (s.title || '').toLowerCase().includes(query) ||
+          (s.reddit_url || '').toLowerCase().includes(query);
+        return matchesQuery &&
+          (!status || s.status === status) &&
+          (!category || s.category === category);
+      });
+
+      const list = $('story-list');
+      if (!filtered.length) {
+        list.innerHTML = '<p class="empty">Keine passenden Storys gefunden.</p>';
+        return;
+      }
+
+      list.innerHTML = filtered.map(s => {
+        const statusClass = ['planned', 'recorded', 'published'].includes(s.status)
+          ? s.status : '';
+        const approved = s.approved_for_website;
+        return `
+          <article class="story">
+            <h3>${escapeHTML(s.title)}</h3>
+            <div class="pills">
+              <span class="pill ${statusClass}">${escapeHTML(statusNames[s.status] || s.status)}</span>
+              <span class="pill">${escapeHTML(s.category)}</span>
+              <span class="pill">${s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache'}</span>
+              ${s.episode_number ? `<span class="pill">Folge ${escapeHTML(s.episode_number)}</span>` : ''}
+              <span class="pill ${approved && s.status === 'published' ? 'published' : ''}">
+                ${approved ? 'Website freigegeben' : 'Nicht freigegeben'}
+              </span>
+            </div>
+            <p><a href="${escapeHTML(s.reddit_url)}" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a></p>
+            ${s.notes ? `<p>${escapeHTML(s.notes).replace(/\n/g, '<br>')}</p>` : ''}
+            <div class="story-actions">
+              <button type="button" data-edit="${escapeHTML(s.id)}">Bearbeiten</button>
+              <button type="button" class="danger" data-delete="${escapeHTML(s.id)}">Löschen</button>
+            </div>
+          </article>`;
+      }).join('');
+    }
+
+    async function loadStories() {
+      if (!currentUser) return;
+      $('story-list').innerHTML = '<p class="empty">Storys werden geladen …</p>';
+      const { data, error } = await db
+        .from('stories')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        $('story-list').innerHTML = '';
+        showMessage('Storys konnten nicht geladen werden: ' + error.message, 'error');
+        return;
+      }
+      stories = data || [];
+      updateStats();
+      renderStories();
+    }
+
+    function resetForm() {
+      $('story-form').reset();
+      $('story-id').value = '';
+      $('story-status').value = 'draft';
+      $('story-category').value = 'Kurioses';
+      $('story-language').value = 'de';
+      $('story-approved').checked = false;
+      $('editor-heading').textContent = 'Neue Story anlegen';
+      $('save-button').textContent = 'Story speichern';
+      $('cancel-edit').classList.add('hidden');
+    }
+
+    function startEdit(id) {
+      const s = stories.find(item => item.id === id);
+      if (!s) return;
+      $('story-id').value = s.id;
+      $('story-title').value = s.title || '';
+      $('story-url').value = s.reddit_url || '';
+      $('story-category').value = s.category || 'Kurioses';
+      $('story-language').value = s.language || 'de';
+      $('story-episode').value = s.episode_number ?? '';
+      $('story-status').value = s.status || 'draft';
+      $('story-notes').value = s.notes || '';
+      $('story-approved').checked = !!s.approved_for_website;
+      $('editor-heading').textContent = 'Story bearbeiten';
+      $('save-button').textContent = 'Änderungen speichern';
+      $('cancel-edit').classList.remove('hidden');
+      $('editor-card').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    $('login-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage();
+      const button = $('login-button');
+      button.disabled = true;
+      button.textContent = 'Anmeldung läuft …';
+
+      const { data, error } = await db.auth.signInWithPassword({
+        email: $('login-email').value.trim(),
+        password: $('login-password').value
+      });
+
+      button.disabled = false;
+      button.textContent = 'Anmelden';
+
+      if (error) {
+        showMessage('Anmeldung fehlgeschlagen. Prüfe E-Mail und Passwort. Details: ' + error.message, 'error');
+        return;
+      }
+      setLoggedIn(data.user);
+      await loadStories();
+      showMessage('Du bist angemeldet.');
+    });
+
+    $('logout-button').addEventListener('click', async () => {
+      const { error } = await db.auth.signOut();
+      if (error) {
+        showMessage('Abmeldung fehlgeschlagen: ' + error.message, 'error');
+        return;
+      }
+      stories = [];
+      setLoggedIn(null);
+      resetForm();
+      clearMessage();
+    });
+
+    $('story-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage();
+
+      if (!currentUser) {
+        showMessage('Bitte melde dich zuerst an.', 'error');
+        return;
+      }
+
+      const id = $('story-id').value;
+      const rawEpisode = $('story-episode').value.trim();
+      const url = $('story-url').value.trim();
+
+      try {
+        const parsedUrl = new URL(url);
+        if (parsedUrl.protocol !== 'https:' ||
+            !['reddit.com', 'www.reddit.com', 'old.reddit.com', 'redd.it', 'www.redd.it'].includes(parsedUrl.hostname)) {
+          showMessage('Bitte einen gültigen HTTPS-Link von Reddit eintragen.', 'error');
+          return;
+        }
+      } catch {
+        showMessage('Bitte einen gültigen Reddit-Link eintragen.', 'error');
+        return;
+      }
+
+      const status = $('story-status').value;
+      const payload = {
+        title: $('story-title').value.trim(),
+        reddit_url: url,
+        category: $('story-category').value,
+        language: $('story-language').value,
+        episode_number: rawEpisode ? Number(rawEpisode) : null,
+        notes: $('story-notes').value.trim(),
+        status,
+        approved_for_website: $('story-approved').checked,
+        updated_at: new Date().toISOString()
+      };
+
+      if (!payload.title) {
+        showMessage('Bitte einen Titel eingeben.', 'error');
+        return;
+      }
+      if (payload.episode_number !== null &&
+          (!Number.isInteger(payload.episode_number) || payload.episode_number < 1)) {
+        showMessage('Die Episodennummer muss eine positive ganze Zahl sein.', 'error');
+        return;
+      }
+
+      const button = $('save-button');
+      button.disabled = true;
+      button.textContent = 'Wird gespeichert …';
+
+      let result;
+      if (id) {
+        result = await db.from('stories').update(payload).eq('id', id).select();
+      } else {
+        result = await db.from('stories').insert(payload).select();
+      }
+
+      button.disabled = false;
+      button.textContent = id ? 'Änderungen speichern' : 'Story speichern';
+
+      if (result.error) {
+        showMessage('Speichern fehlgeschlagen: ' + result.error.message, 'error');
+        return;
+      }
+      if (!result.data || result.data.length === 0) {
+        showMessage('Es wurde keine Story zurückgegeben. Prüfe die Zugriffsrichtlinien (RLS).', 'error');
+        return;
+      }
+
+      resetForm();
+      await loadStories();
+      showMessage(id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.');
+    });
+
+    $('cancel-edit').addEventListener('click', resetForm);
+
+    $('story-list').addEventListener('click', async (event) => {
+      const editButton = event.target.closest('[data-edit]');
+      const deleteButton = event.target.closest('[data-delete]');
+
+      if (editButton) {
+        startEdit(editButton.dataset.edit);
+        return;
+      }
+
+      if (deleteButton) {
+        const story = stories.find(s => s.id === deleteButton.dataset.delete);
+        if (!story) return;
+        if (!window.confirm(`Soll die Story „${story.title}“ wirklich gelöscht werden?`)) return;
+
+        const { error } = await db.from('stories').delete().eq('id', story.id);
+        if (error) {
+          showMessage('Löschen fehlgeschlagen: ' + error.message, 'error');
+          return;
+        }
+        if ($('story-id').value === story.id) resetForm();
+        await loadStories();
+        showMessage('Story gelöscht.');
+      }
+    });
+
+    ['search-filter', 'status-filter', 'category-filter'].forEach(id => {
+      $(id).addEventListener('input', renderStories);
+      $(id).addEventListener('change', renderStories);
+    });
+
+    $('refresh-button').addEventListener('click', loadStories);
+
+    db.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(session?.user ?? null);
+      if (session?.user) {
+        loadStories();
+      } else {
+        stories = [];
+        $('story-list').innerHTML = '';
+      }
+    });
+
+    const { data: { session } } = await db.auth.getSession();
+    setLoggedIn(session?.user ?? null);
+    if (session?.user) await loadStories();
+  </script>
+</body>
+</html>
