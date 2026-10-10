@@ -130,7 +130,7 @@
     </section>
 
     <section id="app" class="hidden">
-      <div class="card">
+      <div class="card" id="overview-card">
         <div class="topbar">
           <div>
             <h2 style="margin-bottom:5px">Redaktionsübersicht</h2>
@@ -358,6 +358,7 @@
 
     function showListView() {
       $('editor-card').classList.add('hidden');
+      $('overview-card').classList.remove('hidden');
       $('story-list-card').classList.remove('hidden');
       $('new-story-button').classList.remove('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -365,6 +366,7 @@
 
     function showEditorView() {
       $('editor-card').classList.remove('hidden');
+      $('overview-card').classList.add('hidden');
       $('story-list-card').classList.add('hidden');
       $('new-story-button').classList.add('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
