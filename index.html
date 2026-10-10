@@ -370,6 +370,7 @@
               <span class="muted" aria-hidden="true">Bearbeiten ›</span>
             </div>
             ${s.description ? `<p class="story-summary">${escapeHTML(s.description)}</p>` : ''}
+            <div class="story-meta">Angelegt von: ${escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt'))}</div>
             <div class="story-actions">
               ${isWebsitePublished
                 ? '<span class="pill published" style="align-self:center">✓ Auf der Website sichtbar</span>'
@@ -520,6 +521,10 @@
         approved_for_website: $('story-approved').checked,
         updated_at: new Date().toISOString()
       };
+      if (!id) {
+        payload.created_by = currentUser.id;
+        payload.created_by_email = currentUser.email;
+      }
 
       if (!payload.title) {
         showMessage('Bitte einen Titel eingeben.', 'error');
