@@ -66,6 +66,11 @@
     button.secondary { background: #e9e9e9; color: #222; }
     button.secondary:hover { background: #ddd; }
     button.danger { background: #a12626; }
+    button.publish-button { background: #16803c; color: #fff; }
+    button.publish-button:hover { background: #11632e; }
+    button.publish-button:focus-visible { outline: 3px solid #9ad7ad; outline-offset: 2px; }
+    .story-summary { color: #555; margin: 10px 0 0; font-size: 14px; }
+    .story-actions .publish-button { margin-right: auto; }
     button:disabled { opacity: .55; cursor: wait; }
     .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .toolbar > * { flex: 1; min-width: 150px; }
@@ -332,6 +337,9 @@
         const statusClass = ['planned', 'recorded', 'published'].includes(s.status)
           ? s.status : '';
         const statusLabel = s.status === 'planned' ? 'In Planung' : (statusNames[s.status] || s.status);
+        const isWebsitePublished = s.status === 'published' && s.approved_for_website;
+        const publishLabel = isWebsitePublished ? '✓ Auf Website veröffentlicht' :
+          (s.status === 'published' ? 'Auf Website freigeben' : 'Veröffentlichen');
         return `
           <article class="story" data-edit="${escapeHTML(s.id)}" tabindex="0" role="button" aria-label="Story bearbeiten: ${escapeHTML(s.title)}">
             <div class="topbar">
@@ -346,7 +354,11 @@
               </div>
               <span class="muted" aria-hidden="true">Bearbeiten ›</span>
             </div>
+            ${s.description ? `<p class="story-summary">${escapeHTML(s.description)}</p>` : ''}
             <div class="story-actions">
+              ${isWebsitePublished
+                ? '<span class="pill published" style="align-self:center">✓ Auf der Website sichtbar</span>'
+                : `<button type="button" class="publish-button" data-publish="${escapeHTML(s.id)}">${publishLabel}</button>`}
               <button type="button" class="danger" data-delete="${escapeHTML(s.id)}">Löschen</button>
             </div>
           </article>`;
@@ -561,8 +573,35 @@
     });
 
     $('story-list').addEventListener('click', async (event) => {
+      const publishButton = event.target.closest('[data-publish]');
       const deleteButton = event.target.closest('[data-delete]');
       const storyCard = event.target.closest('[data-edit]');
+
+      if (publishButton) {
+        event.stopPropagation();
+        const story = stories.find(s => s.id === publishButton.dataset.publish);
+        if (!story) return;
+        const confirmed = window.confirm(
+          `Soll „${story.title}“ jetzt auf der öffentlichen Website erscheinen?\\n\\nBitte nur bestätigen, wenn die Story bereits in einer veröffentlichten Podcastfolge vorkam. Dadurch wird ihr Status auf „Veröffentlicht“ gesetzt und sie wird auf der Website freigegeben.`
+        );
+        if (!confirmed) return;
+
+        publishButton.disabled = true;
+        publishButton.textContent = 'Wird veröffentlicht …';
+        const { error } = await db.from('stories').update({
+          status: 'published',
+          approved_for_website: true,
+          updated_at: new Date().toISOString()
+        }).eq('id', story.id);
+        if (error) {
+          showMessage('Veröffentlichen fehlgeschlagen: ' + error.message, 'error');
+          await loadStories();
+          return;
+        }
+        await loadStories();
+        showMessage('Story veröffentlicht. Sie sollte jetzt auf der öffentlichen Website erscheinen.');
+        return;
+      }
 
       if (deleteButton) {
         const story = stories.find(s => s.id === deleteButton.dataset.delete);
