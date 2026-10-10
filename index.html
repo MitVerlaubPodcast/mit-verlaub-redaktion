@@ -693,7 +693,7 @@
       $('episode-number').disabled = activeEpisode.status === 'published';
       $('episode-title').disabled = activeEpisode.status === 'published';
       $('save-episode-button').disabled = activeEpisode.status === 'published';
-      $('save-episode-button').textContent = activeEpisode.status === 'published' ? 'Veröffentlicht' : 'Folgendaten speichern';
+      $('save-episode-button').textContent = 'Folge speichern';
       $('episode-workspace').classList.remove('hidden');
       $('episode-editor-heading').textContent = 'Folge ' + activeEpisode.episode_number + ' bearbeiten';
       $('add-story-search').value = '';
@@ -725,6 +725,7 @@
       $('episode-editor-heading').textContent = 'Neue Folge erstellen';
       $('episode-editor-status').textContent = 'Neue Folge · Storys können nach dem Speichern hinzugefügt werden.';
       $('save-episode-button').textContent = 'Folge speichern';
+      $('save-episode-button').disabled = false;
       $('episode-bottom-actions').classList.remove('hidden');
       $('delete-episode-button').classList.add('hidden');
       $('finalize-episode-button').disabled = true;
