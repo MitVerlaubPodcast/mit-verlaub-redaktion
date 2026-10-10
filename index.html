@@ -122,15 +122,21 @@
     .episode-story-controls select { max-width:220px; }
     .section-kicker { color:#777; text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:bold; margin:18px 0 4px; }
     .episode-form-grid { display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px; }
-    .checkline { display:flex; align-items:flex-start; gap:10px; margin:12px 0; }
-    .checkline input { width:auto; margin-top:3px; }
-    .checkline label { margin:0; line-height:1.4; }
+    .episode-bottom-actions { position:sticky; bottom:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:12px; margin:24px -22px -22px; padding:14px 22px; border-top:1px solid #e5e5e5; background:rgba(255,255,255,.97); backdrop-filter:blur(8px); border-radius:0 0 14px 14px; }
+    .episode-bottom-right { display:flex; gap:8px; }
+    .episode-bottom-actions button { margin:0; }
+    .episode-bottom-actions .danger { background:#fff; color:#a12424; border:1px solid #e0bcbc; }
+    .episode-story-picker { margin-bottom:12px; }
+    .publish-help { margin:14px 0 0; }
     button:disabled { opacity:.5; cursor:not-allowed; }
     @media (max-width: 620px) {
       .episode-form-grid { grid-template-columns:1fr; gap:0; }
       .episode-story-head { display:block; }
       .episode-story-controls { align-items:stretch; flex-direction:column; }
       .episode-story-controls select, .episode-story-controls button { width:100%; max-width:none; }
+      .episode-bottom-actions { margin:22px -17px -17px; padding:12px 17px; align-items:stretch; flex-direction:column-reverse; }
+      .episode-bottom-right { display:grid; grid-template-columns:1fr 1fr; }
+      .episode-bottom-actions button { min-width:0; width:100%; }
     }
 
     @media (max-width: 620px) {
@@ -227,22 +233,22 @@
             <div class="field"><label for="episode-number">Folgenummer *</label><input id="episode-number" type="number" min="1" step="1" required></div>
             <div class="field"><label for="episode-title">Interner Folgentitel</label><input id="episode-title" maxlength="250" placeholder="z. B. Er rächt sich an der Liebe seines Lebens"></div>
           </div>
-          <button id="save-episode-button" type="submit">Folge speichern</button>
         </form>
         <div id="episode-workspace" class="hidden">
           <div class="section-kicker">Storys für diese Folge</div>
-          <div class="toolbar">
-            <select id="add-story-select" aria-label="Story zur Folge hinzufügen"><option value="">Story aus der Datenbank auswählen …</option></select>
-            <button id="add-story-button" type="button">Zur Folge hinzufügen</button>
+          <div class="toolbar episode-story-picker">
+            <input id="add-story-search" type="search" placeholder="Storys suchen …" aria-label="Storys in der Datenbank suchen">
+            <select id="add-story-select" aria-label="Story zur Folge hinzufügen"><option value="">Story auswählen …</option></select>
+            <button id="add-story-button" type="button">Story hinzufügen</button>
           </div>
           <div id="episode-story-list"><p class="empty">Noch keine Storys zugeordnet.</p></div>
-          <div id="episode-finalize-panel" class="hidden">
-            <div class="section-kicker">Folge abschließen</div>
-            <p class="muted">Erst wenn die Aufnahme fertig ist und jede Story entschieden wurde, kann die Folge abgeschlossen und die verwendeten Storys auf der Website freigegeben werden.</p>
-            <div class="checkline"><input id="recording-confirmed" type="checkbox"><label for="recording-confirmed">Die Aufnahme ist abgeschlossen.</label></div>
-            <div class="checkline"><input id="story-status-confirmed" type="checkbox"><label for="story-status-confirmed">Alle Storys sind als „In der Folge“ oder „Archiviert“ markiert.</label></div>
-            <div class="checkline"><input id="website-preview-confirmed" type="checkbox"><label for="website-preview-confirmed">Folgenummer und Vorschautexte wurden geprüft.</label></div>
-            <button id="finalize-episode-button" class="publish-button" type="button" disabled>Folge abschließen und veröffentlichen</button>
+          <p id="publish-help" class="muted publish-help">Zum Veröffentlichen müssen mindestens eine Story „In der Folge“ und alle übrigen Storys entweder „In der Folge“ oder „Archiviert“ sein.</p>
+        </div>
+        <div class="episode-bottom-actions" id="episode-bottom-actions">
+          <button id="delete-episode-button" class="danger" type="button">Folge löschen</button>
+          <div class="episode-bottom-right">
+            <button id="save-episode-button" class="secondary" type="button">Folge speichern</button>
+            <button id="finalize-episode-button" class="publish-button" type="button" disabled>Folge veröffentlichen</button>
           </div>
         </div>
       </section>
@@ -614,11 +620,18 @@
     function updateAddStoryOptions() {
       const select = $('add-story-select');
       const currentIds = new Set(episodeLinkRows.map(link => link.story_id));
-      const available = stories.filter(story => !currentIds.has(story.id));
-      select.innerHTML = '<option value="">Story aus der Datenbank auswählen …</option>' + available.map(story =>
+      const query = $('add-story-search').value.trim().toLowerCase();
+      const available = stories.filter(story => !currentIds.has(story.id) &&
+        (!query || (story.title || '').toLowerCase().includes(query) ||
+          (story.description || '').toLowerCase().includes(query) ||
+          (story.reddit_url || '').toLowerCase().includes(query)));
+      const previousValue = select.value;
+      select.innerHTML = '<option value="">Story auswählen (' + available.length + ' Treffer) …</option>' + available.map(story =>
         '<option value="' + escapeHTML(story.id) + '">' + escapeHTML(story.title) + ' · ' + escapeHTML(story.created_by_email || 'Redaktion') + '</option>'
       ).join('');
+      if (available.some(story => story.id === previousValue)) select.value = previousValue;
       $('add-story-button').disabled = !available.length || activeEpisode?.status === 'published';
+      $('add-story-search').disabled = activeEpisode?.status === 'published';
     }
 
     function renderEpisodeStories() {
@@ -643,14 +656,24 @@
       updateAddStoryOptions();
       const finalized = episodeLinkRows.length > 0 && episodeLinkRows.every(link => link.status !== 'open');
       const hasSelected = episodeLinkRows.some(link => link.status === 'in_episode');
-      $('story-status-confirmed').disabled = !finalized;
-      $('finalize-episode-button').disabled = activeEpisode.status === 'published' ||
-        !($('recording-confirmed').checked && $('story-status-confirmed').checked && $('website-preview-confirmed').checked && finalized && hasSelected);
-      $('episode-finalize-panel').classList.toggle('hidden', activeEpisode.status === 'published');
-      if (activeEpisode.status === 'published') {
+      $('finalize-episode-button').disabled = !activeEpisode || activeEpisode.status === 'published' || !finalized || !hasSelected;
+      $('finalize-episode-button').textContent = activeEpisode?.status === 'published' ? 'Bereits veröffentlicht' : 'Folge veröffentlichen';
+      $('save-episode-button').disabled = activeEpisode?.status === 'published';
+      $('delete-episode-button').disabled = !activeEpisode;
+      $('delete-episode-button').classList.toggle('hidden', !activeEpisode);
+      $('episode-bottom-actions').classList.remove('hidden');
+      if (activeEpisode?.status === 'published') {
         $('episode-editor-status').textContent = 'Veröffentlicht · Diese Folge ist schreibgeschützt.';
+        $('publish-help').textContent = 'Diese Folge ist bereits veröffentlicht und kann nicht mehr bearbeitet werden.';
       } else {
-        $('episode-editor-status').textContent = activeEpisode.status === 'recorded' ? 'Aufnahme abgeschlossen' : 'In Vorbereitung';
+        $('episode-editor-status').textContent = activeEpisode?.status === 'recorded' ? 'Aufnahme abgeschlossen' : 'In Vorbereitung';
+        $('publish-help').textContent = !episodeLinkRows.length
+          ? 'Füge Storys hinzu, um die Folge veröffentlichen zu können.'
+          : !finalized
+            ? 'Ordne jede Story entweder „In der Folge“ oder „Archiviert“ zu.'
+            : !hasSelected
+              ? 'Markiere mindestens eine Story als „In der Folge“.'
+              : 'Bereit zum Veröffentlichen.';
       }
     }
 
@@ -673,9 +696,7 @@
       $('save-episode-button').textContent = activeEpisode.status === 'published' ? 'Veröffentlicht' : 'Folgendaten speichern';
       $('episode-workspace').classList.remove('hidden');
       $('episode-editor-heading').textContent = 'Folge ' + activeEpisode.episode_number + ' bearbeiten';
-      $('recording-confirmed').checked = activeEpisode.status === 'recorded';
-      $('story-status-confirmed').checked = false;
-      $('website-preview-confirmed').checked = false;
+      $('add-story-search').value = '';
       renderEpisodeStories();
     }
 
@@ -703,7 +724,11 @@
       $('episode-workspace').classList.add('hidden');
       $('episode-editor-heading').textContent = 'Neue Folge erstellen';
       $('episode-editor-status').textContent = 'Neue Folge · Storys können nach dem Speichern hinzugefügt werden.';
-      $('save-episode-button').textContent = 'Folge erstellen';
+      $('save-episode-button').textContent = 'Folge speichern';
+      $('episode-bottom-actions').classList.remove('hidden');
+      $('delete-episode-button').classList.add('hidden');
+      $('finalize-episode-button').disabled = true;
+      $('add-story-search').value = '';
       activeEpisode = null;
       episodeLinkRows = [];
       showEpisodeEditor();
@@ -731,6 +756,29 @@
       await loadEpisodes();
       await openEpisode(result.data.id);
       showMessage(id ? 'Folgendaten gespeichert.' : 'Folge erstellt. Jetzt kannst du Storys hinzufügen.');
+    });
+
+    $('save-episode-button').addEventListener('click', () => $('episode-form').requestSubmit());
+
+    $('add-story-search').addEventListener('input', updateAddStoryOptions);
+
+    $('delete-episode-button').addEventListener('click', async () => {
+      if (!activeEpisode) return;
+      const episode = activeEpisode;
+      const confirmed = window.confirm('Folge ' + episode.episode_number + ' wirklich löschen? Die Zuordnungen zu dieser Folge werden entfernt. Storys bleiben in der Datenbank; bereits veröffentlichte Storys bleiben auch auf der Website.');
+      if (!confirmed) return;
+      const button = $('delete-episode-button');
+      button.disabled = true;
+      const { error } = await db.from('episodes').delete().eq('id', episode.id);
+      if (error) {
+        button.disabled = false;
+        return showMessage('Folge konnte nicht gelöscht werden: ' + error.message, 'error');
+      }
+      activeEpisode = null;
+      episodeLinkRows = [];
+      await loadEpisodes();
+      showHomeView('episodes');
+      showMessage('Folge ' + episode.episode_number + ' wurde gelöscht. Die Storys bleiben erhalten.');
     });
 
     $('add-story-button').addEventListener('click', async () => {
@@ -766,9 +814,9 @@
       if (!activeEpisode || activeEpisode.status === 'published') return;
       const unresolved = episodeLinkRows.filter(link => link.status === 'open');
       const chosen = episodeLinkRows.filter(link => link.status === 'in_episode');
-      if (unresolved.length) return showMessage('Bitte entscheide bei jeder Story, ob sie in die Folge kommt oder archiviert wird.', 'error');
+      if (unresolved.length) return showMessage('Bitte markiere jede Story als „In der Folge“ oder „Archiviert“.', 'error');
       if (!chosen.length) return showMessage('Markiere mindestens eine Story als „In der Folge“.', 'error');
-      const confirmed = window.confirm('Folge ' + activeEpisode.episode_number + ' wirklich abschließen und die ' + chosen.length + ' ausgewählten Storys auf der öffentlichen Website freigeben? Archivierte Storys bleiben in der Gesamtdatenbank.');
+      const confirmed = window.confirm('Folge ' + activeEpisode.episode_number + ' veröffentlichen und ' + chosen.length + ' ausgewählte Storys auf der öffentlichen Website freigeben?');
       if (!confirmed) return;
       const button = $('finalize-episode-button');
       button.disabled = true;
@@ -789,15 +837,6 @@
       await openEpisode(activeEpisode.id);
       showMessage('Folge ' + activeEpisode.episode_number + ' abgeschlossen. Die ausgewählten Storys wurden für die Website freigegeben.');
     });
-
-    $('recording-confirmed').addEventListener('change', () => {
-      if ($('recording-confirmed').checked && activeEpisode && activeEpisode.status === 'draft') {
-        db.from('episodes').update({ status: 'recorded', updated_at: new Date().toISOString() }).eq('id', activeEpisode.id)
-          .then(({ error }) => { if (!error) { activeEpisode.status = 'recorded'; loadEpisodes(); } });
-      }
-      if (activeEpisode) renderEpisodeStories();
-    });
-    ['story-status-confirmed', 'website-preview-confirmed'].forEach(id => $(id).addEventListener('change', renderEpisodeStories));
 
     $('episode-list').addEventListener('click', event => {
       const button = event.target.closest('[data-open-episode]');
