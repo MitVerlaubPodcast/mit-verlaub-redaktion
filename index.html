@@ -337,8 +337,7 @@
         // RSS-zu-JSON-Dienst, da Anchor RSS im Browser nicht zuverlässig direkt lesbar ist.
         // Zeitstempel verhindert, dass eine alte zwischengespeicherte Feed-Antwort angezeigt wird.
         const rssResponse = await fetch(
-          'https://api.rss2json.com/v1/api.json?count=100&rss_url=' +
-          encodeURIComponent(feedUrl) + '&_=' + Date.now()
+          'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl)
         );
         if (!rssResponse.ok) throw new Error('RSS-Feed ist gerade nicht erreichbar.');
         const rss = await rssResponse.json();
