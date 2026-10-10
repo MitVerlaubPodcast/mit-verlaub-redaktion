@@ -108,6 +108,31 @@
     .story-actions button { flex: 1 1 0; width: 0; min-width: 0; font-size: 13px; padding: 8px 8px; white-space: nowrap; }
     .empty { padding: 22px 0; color: #666; text-align: center; }
     footer { text-align: center; padding: 0 16px 28px; color: #777; font-size: 12px; }
+
+    .nav-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+    .nav-tabs button.active { background:#111; color:#fff; }
+    .episode-card { border:1px solid #e7e7e7; border-radius:12px; padding:16px; margin-top:12px; }
+    .episode-card h3 { margin-bottom:6px; }
+    .episode-card .toolbar { margin-top:12px; }
+    .episode-story-row { border:1px solid #e7e7e7; border-radius:10px; padding:13px; margin-top:10px; }
+    .episode-story-row.archived-row { background:#f7f7f7; color:#666; }
+    .episode-story-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .episode-story-head h3 { overflow-wrap:anywhere; }
+    .episode-story-controls { display:flex; align-items:center; gap:8px; margin-top:10px; }
+    .episode-story-controls select { max-width:220px; }
+    .section-kicker { color:#777; text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:bold; margin:18px 0 4px; }
+    .episode-form-grid { display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px; }
+    .checkline { display:flex; align-items:flex-start; gap:10px; margin:12px 0; }
+    .checkline input { width:auto; margin-top:3px; }
+    .checkline label { margin:0; line-height:1.4; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    @media (max-width: 620px) {
+      .episode-form-grid { grid-template-columns:1fr; gap:0; }
+      .episode-story-head { display:block; }
+      .episode-story-controls { align-items:stretch; flex-direction:column; }
+      .episode-story-controls select, .episode-story-controls button { width:100%; max-width:none; }
+    }
+
     @media (max-width: 620px) {
       header h1 { font-size: 28px; }
       .grid, .stats { grid-template-columns: 1fr; }
@@ -173,15 +198,54 @@
       <div class="card" id="overview-card">
         <div class="topbar">
           <div>
-            <h2 style="margin-bottom:5px">Redaktionsübersicht</h2>
+            <h2 style="margin-bottom:5px">Produktionsübersicht</h2>
             <p id="signed-in" class="muted" style="margin:0"></p>
           </div>
           <div class="toolbar" style="flex:0 0 auto">
-            <button id="new-story-button" type="button">+ Neue Story anlegen</button>
+            <button id="new-episode-button" type="button">+ Folge erstellen</button>
+            <button id="new-story-button" class="secondary" type="button">+ Story anlegen</button>
             <button id="refresh-button" class="secondary" type="button">Aktualisieren</button>
           </div>
         </div>
+        <div class="nav-tabs">
+          <button type="button" class="secondary active" id="show-episodes-tab">Folgen</button>
+          <button type="button" class="secondary" id="show-database-tab">Story-Datenbank</button>
+        </div>
       </div>
+      <section class="card" id="episode-list-card">
+        <div class="topbar"><div><h2 style="margin-bottom:5px">Folgen</h2><p class="muted" style="margin:0">Storys auswählen, Aufnahme vorbereiten und Folgen abschließen.</p></div></div>
+        <div id="episode-list"><p class="empty">Folgen werden geladen …</p></div>
+      </section>
+      <section class="card hidden" id="episode-editor-card">
+        <div class="topbar" style="margin-bottom:18px">
+          <div><h2 id="episode-editor-heading" style="margin:0">Folge erstellen</h2><p id="episode-editor-status" class="muted" style="margin:6px 0 0"></p></div>
+          <button id="episode-back-button" class="secondary" type="button">← Zurück zu den Folgen</button>
+        </div>
+        <form id="episode-form">
+          <input id="episode-id" type="hidden">
+          <div class="episode-form-grid">
+            <div class="field"><label for="episode-number">Folgenummer *</label><input id="episode-number" type="number" min="1" step="1" required></div>
+            <div class="field"><label for="episode-title">Interner Folgentitel</label><input id="episode-title" maxlength="250" placeholder="z. B. Er rächt sich an der Liebe seines Lebens"></div>
+          </div>
+          <button id="save-episode-button" type="submit">Folge speichern</button>
+        </form>
+        <div id="episode-workspace" class="hidden">
+          <div class="section-kicker">Storys für diese Folge</div>
+          <div class="toolbar">
+            <select id="add-story-select" aria-label="Story zur Folge hinzufügen"><option value="">Story aus der Datenbank auswählen …</option></select>
+            <button id="add-story-button" type="button">Zur Folge hinzufügen</button>
+          </div>
+          <div id="episode-story-list"><p class="empty">Noch keine Storys zugeordnet.</p></div>
+          <div id="episode-finalize-panel" class="hidden">
+            <div class="section-kicker">Folge abschließen</div>
+            <p class="muted">Erst wenn die Aufnahme fertig ist und jede Story entschieden wurde, kann die Folge abgeschlossen und die verwendeten Storys auf der Website freigegeben werden.</p>
+            <div class="checkline"><input id="recording-confirmed" type="checkbox"><label for="recording-confirmed">Die Aufnahme ist abgeschlossen.</label></div>
+            <div class="checkline"><input id="story-status-confirmed" type="checkbox"><label for="story-status-confirmed">Alle Storys sind als „In der Folge“ oder „Archiviert“ markiert.</label></div>
+            <div class="checkline"><input id="website-preview-confirmed" type="checkbox"><label for="website-preview-confirmed">Folgenummer und Vorschautexte wurden geprüft.</label></div>
+            <button id="finalize-episode-button" class="publish-button" type="button" disabled>Folge abschließen und veröffentlichen</button>
+          </div>
+        </div>
+      </section>
 
       <section class="card hidden" id="editor-card">
         <div class="topbar" style="margin-bottom:18px"><h2 id="editor-heading" style="margin:0">Neue Story anlegen</h2><button id="back-to-list" class="secondary" type="button">← Zurück zur Übersicht</button></div>
@@ -221,17 +285,10 @@
                 <option value="other">Andere</option>
               </select>
             </div>
-            <div class="field">
-              <label for="story-episode">Episodennummer</label>
-              <input id="story-episode" type="number" min="1" step="1" placeholder="z. B. 84">
-            </div>
-            <div class="field">
-              <label for="story-status">Status</label>
-              <select id="story-status">
-                <option value="planned">Planung</option>
-                <option value="recorded">Aufgezeichnet</option>
-              </select>
-            </div>
+          </div>
+          <div class="hidden">
+            <input id="story-episode" type="number" min="1" step="1">
+            <select id="story-status"><option value="planned">Planung</option><option value="recorded">Aufgezeichnet</option></select>
           </div>
           <div class="field">
             <label for="story-notes">Notizen für die Aufnahme</label>
@@ -244,10 +301,17 @@
         </form>
       </section>
 
-      <section class="card" id="story-list-card">
-        <h2>Alle Reddit-Storys</h2>
+      <section class="card hidden" id="story-list-card">
+        <h2>Story-Datenbank</h2>
+        <p class="muted">Alle gesammelten Storys bleiben hier erhalten – auch wenn sie für eine Folge archiviert wurden.</p>
         <div class="toolbar">
           <input id="search-filter" type="search" placeholder="Titel oder Reddit-Link suchen">
+          <select id="history-filter" aria-label="Nach Folgenverlauf filtern">
+            <option value="">Alle Storys</option>
+            <option value="used">In veröffentlichten Folgen verwendet</option>
+            <option value="archived">Für eine Folge archiviert</option>
+            <option value="unused">Noch nie verwendet</option>
+          </select>
           <select id="status-filter" aria-label="Nach Status filtern">
             <option value="">Alle Status</option>
             <option value="draft">Entwurf</option>
@@ -287,7 +351,11 @@
     const db = createClient(SUPABASE_URL, SUPABASE_KEY);
     const $ = (id) => document.getElementById(id);
     let stories = [];
+    let episodes = [];
+    let episodeLinks = [];
     let currentUser = null;
+    let activeEpisode = null;
+    let episodeLinkRows = [];
 
     const statusNames = {
       draft: 'Entwurf',
@@ -372,52 +440,36 @@
       const query = $('search-filter').value.trim().toLowerCase();
       const status = $('status-filter').value;
       const category = $('category-filter').value;
-
+      const history = $('history-filter').value;
       const filtered = stories.filter(s => {
-        const matchesQuery = !query ||
-          (s.title || '').toLowerCase().includes(query) ||
-          (s.reddit_url || '').toLowerCase().includes(query);
-        return matchesQuery &&
-          (!status || s.status === status) &&
-          (!category || s.category === category);
+        const matchesQuery = !query || (s.title || '').toLowerCase().includes(query) ||
+          (s.reddit_url || '').toLowerCase().includes(query) || (s.description || '').toLowerCase().includes(query);
+        const links = episodeLinks.filter(link => link.story_id === s.id);
+        const wasUsed = links.some(link => link.status === 'in_episode' && link.episode && link.episode.status === 'published');
+        const wasArchived = links.some(link => link.status === 'archived');
+        const matchesHistory = !history || (history === 'used' ? wasUsed : history === 'archived' ? wasArchived : !links.length);
+        return matchesQuery && (!status || s.status === status) && (!category || s.category === category) && matchesHistory;
       });
-
       const list = $('story-list');
-      if (!filtered.length) {
-        list.innerHTML = '<p class="empty">Keine passenden Storys gefunden.</p>';
-        return;
-      }
-
+      if (!filtered.length) { list.innerHTML = '<p class="empty">Keine passenden Storys gefunden.</p>'; return; }
       list.innerHTML = filtered.map(s => {
-        const statusClass = ['planned', 'recorded', 'published'].includes(s.status)
-          ? s.status : '';
-        const statusLabel = s.status === 'planned' ? 'In Planung' : (statusNames[s.status] || s.status);
-        const isWebsitePublished = s.status === 'published' && s.approved_for_website;
-        const publishLabel = isWebsitePublished ? '✓ Auf Website veröffentlicht' :
-          (s.status === 'published' ? 'Auf Website freigeben' : 'Veröffentlichen');
-        return `
-          <article class="story" data-edit="${escapeHTML(s.id)}" tabindex="0" role="button" aria-label="Story bearbeiten: ${escapeHTML(s.title)}">
-            <div class="topbar">
-              <div style="min-width:0">
-                <h3>${escapeHTML(s.title)}</h3>
-                <div class="pills">
-                  <span class="pill ${statusClass}">${escapeHTML(statusLabel)}</span>
-                  <span class="pill">${escapeHTML(s.category)}</span>
-                  <span class="pill">${s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache'}</span>
-                  ${s.episode_number ? `<span class="pill">Folge ${escapeHTML(s.episode_number)}</span>` : ''}
-                </div>
-              </div>
-            </div>
-            ${s.description ? `<p class="story-summary">${escapeHTML(s.description)}</p>` : ''}
-            <div class="story-meta">Angelegt von: ${escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt'))}</div>
-            <div class="story-actions">
-              ${isWebsitePublished
-                ? `<button type="button" class="publish-button" disabled aria-label="Bereits veröffentlicht">✓ Veröffentlicht</button>`
-                : `<button type="button" class="publish-button" data-publish="${escapeHTML(s.id)}">${publishLabel}</button>`}
-              <button type="button" class="secondary" data-edit-button="${escapeHTML(s.id)}">Bearbeiten</button>
-              <button type="button" class="danger" data-delete="${escapeHTML(s.id)}">Löschen</button>
-            </div>
-          </article>`;
+        const links = episodeLinks.filter(link => link.story_id === s.id);
+        const used = links.find(link => link.status === 'in_episode' && link.episode && link.episode.status === 'published');
+        const archived = links.some(link => link.status === 'archived');
+        const episodeLabel = used ? 'Folge ' + used.episode.episode_number : (s.episode_number ? 'Folge ' + s.episode_number : '');
+        const stateLabel = used ? 'In Folge verwendet' : archived ? 'Mindestens einmal archiviert' : 'Noch nie verwendet';
+        const stateClass = used ? 'published' : archived ? 'planned' : '';
+        return '<article class="story" data-edit="' + escapeHTML(s.id) + '">' +
+          '<div class="topbar"><div style="min-width:0"><h3>' + escapeHTML(s.title) + '</h3><div class="pills">' +
+          '<span class="pill ' + stateClass + '">' + stateLabel + '</span>' +
+          '<span class="pill">' + escapeHTML(s.category || 'Sonstiges') + '</span>' +
+          '<span class="pill">' + (s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache') + '</span>' +
+          (episodeLabel ? '<span class="pill">' + escapeHTML(episodeLabel) + '</span>' : '') +
+          '</div></div></div>' +
+          (s.description ? '<p class="story-summary">' + escapeHTML(s.description) + '</p>' : '') +
+          '<div class="story-meta">Vorgeschlagen von: ' + escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt')) + '</div>' +
+          '<div class="story-actions"><button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button>' +
+          '<button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div></article>';
       }).join('');
     }
 
@@ -440,16 +492,15 @@
     }
 
     function showListView() {
-      $('editor-card').classList.add('hidden');
-      $('overview-card').classList.remove('hidden');
-      $('story-list-card').classList.remove('hidden');
-      $('new-story-button').classList.remove('hidden');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showHomeView('database');
     }
 
     function showEditorView() {
       $('editor-card').classList.remove('hidden');
       $('overview-card').classList.add('hidden');
+      $('stats-card').classList.add('hidden');
+      $('episode-list-card').classList.add('hidden');
+      $('episode-editor-card').classList.add('hidden');
       $('story-list-card').classList.add('hidden');
       $('new-story-button').classList.add('hidden');
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -459,6 +510,7 @@
       $('story-form').reset();
       $('story-id').value = '';
       $('story-status').value = 'planned';
+      $('story-episode').value = '';
       $('story-category').value = 'Kurioses';
       $('story-language').value = 'de';
       $('editor-heading').textContent = 'Neue Story anlegen';
@@ -484,6 +536,282 @@
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
       showEditorView();
+    }
+
+    function showHomeView(tab = 'episodes') {
+      activeEpisode = null;
+      $('overview-card').classList.remove('hidden');
+      $('stats-card').classList.remove('hidden');
+      $('episode-list-card').classList.toggle('hidden', tab !== 'episodes');
+      $('episode-editor-card').classList.add('hidden');
+      $('editor-card').classList.add('hidden');
+      $('story-list-card').classList.toggle('hidden', tab !== 'database');
+      $('show-episodes-tab').classList.toggle('active', tab === 'episodes');
+      $('show-database-tab').classList.toggle('active', tab === 'database');
+      $('new-story-button').classList.toggle('hidden', tab !== 'database');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showEpisodeEditor() {
+      $('stats-card').classList.add('hidden');
+      $('overview-card').classList.add('hidden');
+      $('episode-list-card').classList.add('hidden');
+      $('story-list-card').classList.add('hidden');
+      $('editor-card').classList.add('hidden');
+      $('episode-editor-card').classList.remove('hidden');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function loadEpisodes() {
+      const { data, error } = await db.from('episodes').select('*').order('episode_number', { ascending: false });
+      if (error) {
+        $('episode-list').innerHTML = '<p class="empty">Folgen konnten nicht geladen werden. Hast du das neue Datenbank-SQL ausgeführt? Details: ' + escapeHTML(error.message) + '</p>';
+        episodes = [];
+        return;
+      }
+      episodes = data || [];
+      const { data: links, error: linksError } = await db
+        .from('episode_stories')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,created_by_email,status,episode_number)');
+      if (linksError) {
+        $('episode-list').innerHTML = '<p class="empty">Die Folgen-Storys konnten nicht geladen werden: ' + escapeHTML(linksError.message) + '</p>';
+        episodeLinks = [];
+      } else {
+        episodeLinks = (links || []).map(link => ({
+          ...link,
+          episode: Array.isArray(link.episode) ? link.episode[0] : link.episode,
+          story: Array.isArray(link.story) ? link.story[0] : link.story
+        }));
+      }
+      renderEpisodeList();
+      updateStats();
+      renderStories();
+      if (activeEpisode) {
+        const refreshed = episodes.find(ep => ep.id === activeEpisode.id);
+        if (refreshed) { activeEpisode = refreshed; await loadEpisodeWorkspace(); }
+      }
+    }
+
+    function renderEpisodeList() {
+      const target = $('episode-list');
+      if (!episodes.length) {
+        target.innerHTML = '<p class="empty">Noch keine Folgen angelegt. Erstelle eine Folge, um Storys gemeinsam zu sammeln.</p>';
+        return;
+      }
+      const names = { draft: 'In Vorbereitung', recorded: 'Aufnahme abgeschlossen', published: 'Veröffentlicht' };
+      target.innerHTML = episodes.map(ep => {
+        const links = episodeLinks.filter(link => link.episode_id === ep.id);
+        const chosen = links.filter(link => link.status === 'in_episode').length;
+        const archived = links.filter(link => link.status === 'archived').length;
+        const open = links.filter(link => link.status === 'open').length;
+        return '<article class="episode-card"><div class="topbar"><div><h3>Folge ' + ep.episode_number + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</h3>' +
+          '<div class="pills"><span class="pill ' + (ep.status === 'published' ? 'published' : ep.status === 'recorded' ? 'recorded' : 'planned') + '">' + names[ep.status] + '</span>' +
+          '<span class="pill">' + chosen + ' ausgewählt</span><span class="pill">' + open + ' offen</span><span class="pill">' + archived + ' archiviert</span></div></div>' +
+          '<button type="button" data-open-episode="' + ep.id + '">' + (ep.status === 'published' ? 'Folge ansehen' : 'Folge bearbeiten') + '</button></div></article>';
+      }).join('');
+    }
+
+    function updateAddStoryOptions() {
+      const select = $('add-story-select');
+      const currentIds = new Set(episodeLinkRows.map(link => link.story_id));
+      const available = stories.filter(story => !currentIds.has(story.id));
+      select.innerHTML = '<option value="">Story aus der Datenbank auswählen …</option>' + available.map(story =>
+        '<option value="' + escapeHTML(story.id) + '">' + escapeHTML(story.title) + ' · ' + escapeHTML(story.created_by_email || 'Redaktion') + '</option>'
+      ).join('');
+      $('add-story-button').disabled = !available.length || activeEpisode?.status === 'published';
+    }
+
+    function renderEpisodeStories() {
+      const target = $('episode-story-list');
+      const active = episodeLinkRows.filter(link => link.status !== 'archived');
+      const archived = episodeLinkRows.filter(link => link.status === 'archived');
+      const renderRow = (link, isArchived) => {
+        const story = link.story || stories.find(s => s.id === link.story_id) || {};
+        const statusOptions = isArchived
+          ? '<option value="archived" selected>Archiviert</option><option value="open">Wieder öffnen</option>'
+          : '<option value="open" ' + (link.status === 'open' ? 'selected' : '') + '>Offen</option><option value="in_episode" ' + (link.status === 'in_episode' ? 'selected' : '') + '>In der Folge</option><option value="archived">Archivieren</option>';
+        return '<article class="episode-story-row ' + (isArchived ? 'archived-row' : '') + '"><div class="episode-story-head"><div><h3>' + escapeHTML(story.title || 'Story') + '</h3>' +
+          '<div class="pills"><span class="pill">' + escapeHTML(story.category || 'Sonstiges') + '</span><span class="pill">' + escapeHTML(link.proposed_by_email || story.created_by_email || 'Redaktion') + ' vorgeschlagen</span></div>' +
+          (story.description ? '<p class="story-summary">' + escapeHTML(story.description) + '</p>' : '') +
+          (story.reddit_url ? '<a href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit-Story öffnen ↗</a>' : '') +
+          '</div><span class="pill ' + (link.status === 'in_episode' ? 'published' : isArchived ? 'planned' : '') + '">' + (link.status === 'in_episode' ? 'In der Folge' : isArchived ? 'Archiviert' : 'Offen') + '</span></div>' +
+          '<div class="episode-story-controls"><label style="margin:0;min-width:110px" for="link-status-' + link.id + '">Status für diese Folge</label><select id="link-status-' + link.id + '" data-link-status="' + link.id + '" ' + (activeEpisode.status === 'published' ? 'disabled' : '') + '>' + statusOptions + '</select>' +
+          (story.reddit_url ? '<a class="button-link" href="' + escapeHTML(story.reddit_url) + '" target="_blank" rel="noopener noreferrer">Reddit öffnen</a>' : '') + '</div></article>';
+      };
+      target.innerHTML = (active.length ? '<div class="section-kicker">Aktuelle Auswahl</div>' + active.map(link => renderRow(link, false)).join('') : '<p class="empty">Noch keine aktiven Storys in dieser Folge. Füge unten Storys aus der Gesamtdatenbank hinzu.</p>') +
+        (archived.length ? '<div class="section-kicker">Für diese Folge archiviert (' + archived.length + ')</div>' + archived.map(link => renderRow(link, true)).join('') : '');
+      updateAddStoryOptions();
+      const finalized = episodeLinkRows.length > 0 && episodeLinkRows.every(link => link.status !== 'open');
+      const hasSelected = episodeLinkRows.some(link => link.status === 'in_episode');
+      $('story-status-confirmed').disabled = !finalized;
+      $('finalize-episode-button').disabled = activeEpisode.status === 'published' ||
+        !($('recording-confirmed').checked && $('story-status-confirmed').checked && $('website-preview-confirmed').checked && finalized && hasSelected);
+      $('episode-finalize-panel').classList.toggle('hidden', activeEpisode.status === 'published');
+      if (activeEpisode.status === 'published') {
+        $('episode-editor-status').textContent = 'Veröffentlicht · Diese Folge ist schreibgeschützt.';
+      } else {
+        $('episode-editor-status').textContent = activeEpisode.status === 'recorded' ? 'Aufnahme abgeschlossen' : 'In Vorbereitung';
+      }
+    }
+
+    async function loadEpisodeWorkspace() {
+      const { data, error } = await db.from('episode_stories')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,reddit_url,category,language,created_by,created_by_email,status,episode_number)')
+        .eq('episode_id', activeEpisode.id).order('position', { ascending: true }).order('created_at', { ascending: true });
+      if (error) { showMessage('Storys dieser Folge konnten nicht geladen werden: ' + error.message, 'error'); return; }
+      episodeLinkRows = (data || []).map(link => ({
+        ...link,
+        episode: Array.isArray(link.episode) ? link.episode[0] : link.episode,
+        story: Array.isArray(link.story) ? link.story[0] : link.story
+      }));
+      $('episode-id').value = activeEpisode.id;
+      $('episode-number').value = activeEpisode.episode_number;
+      $('episode-title').value = activeEpisode.title || '';
+      $('episode-number').disabled = activeEpisode.status === 'published';
+      $('episode-title').disabled = activeEpisode.status === 'published';
+      $('save-episode-button').disabled = activeEpisode.status === 'published';
+      $('save-episode-button').textContent = activeEpisode.status === 'published' ? 'Veröffentlicht' : 'Folgendaten speichern';
+      $('episode-workspace').classList.remove('hidden');
+      $('episode-editor-heading').textContent = 'Folge ' + activeEpisode.episode_number + ' bearbeiten';
+      $('recording-confirmed').checked = activeEpisode.status === 'recorded';
+      $('story-status-confirmed').checked = false;
+      $('website-preview-confirmed').checked = false;
+      renderEpisodeStories();
+    }
+
+    async function openEpisode(id) {
+      const episode = episodes.find(ep => ep.id === id);
+      if (!episode) return;
+      activeEpisode = episode;
+      $('episode-form').reset();
+      $('episode-id').value = episode.id;
+      $('episode-number').value = episode.episode_number;
+      $('episode-title').value = episode.title || '';
+      $('episode-workspace').classList.remove('hidden');
+      showEpisodeEditor();
+      await loadEpisodeWorkspace();
+    }
+
+    async function createEpisode() {
+      const nextNumber = Math.max(0, ...episodes.map(ep => Number(ep.episode_number) || 0)) + 1;
+      $('episode-form').reset();
+      $('episode-id').value = '';
+      $('episode-number').value = nextNumber;
+      $('episode-title').value = 'Folge ' + nextNumber;
+      $('episode-number').disabled = false;
+      $('episode-title').disabled = false;
+      $('episode-workspace').classList.add('hidden');
+      $('episode-editor-heading').textContent = 'Neue Folge erstellen';
+      $('episode-editor-status').textContent = 'Neue Folge · Storys können nach dem Speichern hinzugefügt werden.';
+      $('save-episode-button').textContent = 'Folge erstellen';
+      activeEpisode = null;
+      episodeLinkRows = [];
+      showEpisodeEditor();
+      $('episode-number').focus();
+    }
+
+    $('episode-form').addEventListener('submit', async event => {
+      event.preventDefault();
+      if (!currentUser) return showMessage('Bitte melde dich zuerst an.', 'error');
+      const number = Number($('episode-number').value);
+      if (!Number.isInteger(number) || number < 1) return showMessage('Bitte eine gültige Folgenummer eingeben.', 'error');
+      const title = $('episode-title').value.trim() || 'Folge ' + number;
+      const id = $('episode-id').value;
+      const payload = { episode_number: number, title, updated_at: new Date().toISOString() };
+      let result;
+      if (id) {
+        result = await db.from('episodes').update(payload).eq('id', id).select().single();
+      } else {
+        payload.created_by = currentUser.id;
+        payload.created_by_email = currentUser.email;
+        result = await db.from('episodes').insert(payload).select().single();
+      }
+      if (result.error) return showMessage('Folge konnte nicht gespeichert werden: ' + result.error.message, 'error');
+      activeEpisode = result.data;
+      await loadEpisodes();
+      await openEpisode(result.data.id);
+      showMessage(id ? 'Folgendaten gespeichert.' : 'Folge erstellt. Jetzt kannst du Storys hinzufügen.');
+    });
+
+    $('add-story-button').addEventListener('click', async () => {
+      if (!activeEpisode || activeEpisode.status === 'published') return;
+      const storyId = $('add-story-select').value;
+      if (!storyId) return showMessage('Bitte zuerst eine Story auswählen.', 'error');
+      const story = stories.find(s => s.id === storyId);
+      const { error } = await db.from('episode_stories').insert({
+        episode_id: activeEpisode.id, story_id: storyId, status: 'open',
+        proposed_by: currentUser.id, proposed_by_email: currentUser.email,
+        position: episodeLinkRows.length
+      });
+      if (error) return showMessage('Story konnte nicht hinzugefügt werden: ' + error.message, 'error');
+      await loadEpisodes();
+      await loadEpisodeWorkspace();
+      showMessage('Story zur Folge hinzugefügt' + (story?.created_by_email ? '. Vorgeschlagen von ' + story.created_by_email + '.' : '.'));
+    });
+
+    $('episode-story-list').addEventListener('change', async event => {
+      const select = event.target.closest('[data-link-status]');
+      if (!select || !activeEpisode || activeEpisode.status === 'published') return;
+      const link = episodeLinkRows.find(row => row.id === select.dataset.linkStatus);
+      if (!link) return;
+      const nextStatus = select.value;
+      select.disabled = true;
+      const { error } = await db.from('episode_stories').update({ status: nextStatus, updated_at: new Date().toISOString() }).eq('id', link.id);
+      if (error) { showMessage('Status konnte nicht gespeichert werden: ' + error.message, 'error'); await loadEpisodeWorkspace(); return; }
+      await loadEpisodes();
+      await loadEpisodeWorkspace();
+    });
+
+    $('finalize-episode-button').addEventListener('click', async () => {
+      if (!activeEpisode || activeEpisode.status === 'published') return;
+      const unresolved = episodeLinkRows.filter(link => link.status === 'open');
+      const chosen = episodeLinkRows.filter(link => link.status === 'in_episode');
+      if (unresolved.length) return showMessage('Bitte entscheide bei jeder Story, ob sie in die Folge kommt oder archiviert wird.', 'error');
+      if (!chosen.length) return showMessage('Markiere mindestens eine Story als „In der Folge“.', 'error');
+      const confirmed = window.confirm('Folge ' + activeEpisode.episode_number + ' wirklich abschließen und die ' + chosen.length + ' ausgewählten Storys auf der öffentlichen Website freigeben? Archivierte Storys bleiben in der Gesamtdatenbank.');
+      if (!confirmed) return;
+      const button = $('finalize-episode-button');
+      button.disabled = true;
+      button.textContent = 'Folge wird veröffentlicht …';
+      for (const link of chosen) {
+        const { error } = await db.from('stories').update({
+          status: 'published', approved_for_website: true,
+          episode_number: activeEpisode.episode_number,
+          updated_at: new Date().toISOString()
+        }).eq('id', link.story_id);
+        if (error) { button.textContent = 'Erneut versuchen'; showMessage('Eine Story konnte nicht veröffentlicht werden: ' + error.message + '. Die Folge wurde noch nicht als abgeschlossen markiert.', 'error'); return; }
+      }
+      const { error: episodeError } = await db.from('episodes').update({
+        status: 'published', published_at: new Date().toISOString(), updated_at: new Date().toISOString()
+      }).eq('id', activeEpisode.id);
+      if (episodeError) { showMessage('Die Storys wurden freigegeben, aber der Folgenstatus konnte nicht gespeichert werden: ' + episodeError.message, 'error'); return; }
+      await loadEpisodes();
+      await openEpisode(activeEpisode.id);
+      showMessage('Folge ' + activeEpisode.episode_number + ' abgeschlossen. Die ausgewählten Storys wurden für die Website freigegeben.');
+    });
+
+    $('recording-confirmed').addEventListener('change', () => {
+      if ($('recording-confirmed').checked && activeEpisode && activeEpisode.status === 'draft') {
+        db.from('episodes').update({ status: 'recorded', updated_at: new Date().toISOString() }).eq('id', activeEpisode.id)
+          .then(({ error }) => { if (!error) { activeEpisode.status = 'recorded'; loadEpisodes(); } });
+      }
+      if (activeEpisode) renderEpisodeStories();
+    });
+    ['story-status-confirmed', 'website-preview-confirmed'].forEach(id => $(id).addEventListener('change', renderEpisodeStories));
+
+    $('episode-list').addEventListener('click', event => {
+      const button = event.target.closest('[data-open-episode]');
+      if (button) openEpisode(button.dataset.openEpisode);
+    });
+    $('new-episode-button').addEventListener('click', createEpisode);
+    $('episode-back-button').addEventListener('click', async () => { await loadEpisodes(); showHomeView('episodes'); });
+    $('show-episodes-tab').addEventListener('click', () => showHomeView('episodes'));
+    $('show-database-tab').addEventListener('click', () => showHomeView('database'));
+
+    async function loadAll() {
+      if (!currentUser) return;
+      await loadStories();
+      await loadEpisodes();
     }
 
     $('login-form').addEventListener('submit', async (event) => {
@@ -554,12 +882,14 @@
         reddit_url: url,
         category: $('story-category').value,
         language: $('story-language').value,
-        episode_number: rawEpisode ? Number(rawEpisode) : null,
         description: $('story-description').value.trim(),
         notes: $('story-notes').value.trim(),
-        status: id && stories.find(s => s.id === id)?.status === 'published' ? 'published' : status,
         updated_at: new Date().toISOString()
       };
+      if (!id) {
+        payload.episode_number = null;
+        payload.status = 'planned';
+      }
       if (!id) {
         payload.created_by = currentUser.id;
         payload.created_by_email = currentUser.email;
@@ -599,8 +929,8 @@
       }
 
       resetForm();
-      await loadStories();
-      showListView();
+      await loadAll();
+      showHomeView('database');
       showMessage(id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.');
     });
 
@@ -664,6 +994,10 @@
       if (deleteButton) {
         const story = stories.find(s => s.id === deleteButton.dataset.delete);
         if (!story) return;
+        if (episodeLinks.some(link => link.story_id === story.id)) {
+          showMessage('Diese Story ist mit mindestens einer Folge verknüpft. Entferne oder archiviere sie dort, bevor du sie löschen kannst.', 'error');
+          return;
+        }
         if (!window.confirm(`Soll die Story „${story.title}“ wirklich gelöscht werden?`)) return;
 
         const { error } = await db.from('stories').delete().eq('id', story.id);
@@ -680,17 +1014,17 @@
       if (storyCard) startEdit(storyCard.dataset.edit);
     });
 
-    ['search-filter', 'status-filter', 'category-filter'].forEach(id => {
+    ['search-filter', 'status-filter', 'category-filter', 'history-filter'].forEach(id => {
       $(id).addEventListener('input', renderStories);
       $(id).addEventListener('change', renderStories);
     });
 
-    $('refresh-button').addEventListener('click', loadStories);
+    $('refresh-button').addEventListener('click', loadAll);
 
     db.auth.onAuthStateChange((_event, session) => {
       setLoggedIn(session?.user ?? null);
       if (session?.user) {
-        loadStories();
+        loadAll();
       } else {
         stories = [];
         $('story-list').innerHTML = '';
@@ -699,7 +1033,7 @@
 
     const { data: { session } } = await db.auth.getSession();
     setLoggedIn(session?.user ?? null);
-    if (session?.user) { showListView(); await loadStories(); }
+    if (session?.user) { showHomeView('episodes'); await loadAll(); }
     loadNextPlannedEpisode();
   </script>
 </body>
