@@ -447,7 +447,7 @@
         const links = episodeLinks.filter(link => link.story_id === s.id);
         const wasUsed = links.some(link => link.status === 'in_episode' && link.episode && link.episode.status === 'published');
         const wasArchived = links.some(link => link.status === 'archived');
-        const matchesHistory = !history || (history === 'used' ? wasUsed : history === 'archived' ? wasArchived : !links.length);
+        const matchesHistory = !history || (history === 'used' ? wasUsed : history === 'archived' ? wasArchived : !wasUsed);
         return matchesQuery && (!status || s.status === status) && (!category || s.category === category) && matchesHistory;
       });
       const list = $('story-list');
