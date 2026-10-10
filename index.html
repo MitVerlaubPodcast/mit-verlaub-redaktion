@@ -199,6 +199,9 @@
           <strong>Zuletzt veröffentlichte Folge:</strong>
           <div id="next-episode-info" class="muted" style="margin-top:6px">Wird aus dem RSS-Feed geladen …</div>
         </div>
+        <div style="margin-top:14px">
+          <button id="edit-current-episode-button" type="button" disabled>Aktuelle Folge bearbeiten</button>
+        </div>
       </div>
 
       <div class="card" id="overview-card">
@@ -590,6 +593,7 @@
         return;
       }
       episodes = data || [];
+      updateCurrentEpisodeButton();
       updateStoryEpisodeOptions($('story-episode-select')?.value || '');
       const { data: links, error: linksError } = await db
         .from('episode_stories')
@@ -611,6 +615,22 @@
         const refreshed = episodes.find(ep => ep.id === activeEpisode.id);
         if (refreshed) { activeEpisode = refreshed; await loadEpisodeWorkspace(); }
       }
+    }
+
+    function updateCurrentEpisodeButton() {
+      const button = $('edit-current-episode-button');
+      if (!button) return;
+      const newest = [...episodes].sort((a, b) =>
+        (Number(b.episode_number) || 0) - (Number(a.episode_number) || 0)
+      )[0];
+      if (!newest) {
+        button.textContent = 'Aktuelle Folge bearbeiten';
+        button.disabled = true;
+        return;
+      }
+      button.textContent = 'Aktuelle Folge bearbeiten – Folge ' + newest.episode_number;
+      button.disabled = false;
+      button.dataset.episodeId = newest.id;
     }
 
     function updateStoryEpisodeOptions(selectedId = '') {
@@ -886,6 +906,13 @@
     $('episode-list').addEventListener('click', event => {
       const button = event.target.closest('[data-open-episode]');
       if (button) openEpisode(button.dataset.openEpisode);
+    });
+    $('edit-current-episode-button').addEventListener('click', async () => {
+      const newest = [...episodes].sort((a, b) =>
+        (Number(b.episode_number) || 0) - (Number(a.episode_number) || 0)
+      )[0];
+      if (!newest) return showMessage('Es gibt noch keine Folge, die bearbeitet werden kann.', 'error');
+      await openEpisode(newest.id);
     });
     $('new-episode-button').addEventListener('click', createEpisode);
     $('episode-back-button').addEventListener('click', async () => { await loadEpisodes(); showHomeView('episodes'); });
