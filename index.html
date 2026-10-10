@@ -102,8 +102,8 @@
     .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
     .stat { background: #f5f5f5; padding: 14px; border-radius: 10px; }
     .stat strong { display: block; font-size: 25px; margin-bottom: 4px; }
-    .story-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-    .story-actions button { font-size: 14px; padding: 9px 12px; }
+    .story-actions { display: flex; gap: 8px; flex-wrap: nowrap; margin-top: 12px; }
+    .story-actions button { flex: 1 1 0; width: 0; min-width: 0; font-size: 13px; padding: 8px 8px; white-space: nowrap; }
     .empty { padding: 22px 0; color: #666; text-align: center; }
     footer { text-align: center; padding: 0 16px 28px; color: #777; font-size: 12px; }
     @media (max-width: 620px) {
@@ -122,8 +122,8 @@
         min-width: 0;
         text-align: center;
       }
-      .story-actions { flex-wrap: nowrap; gap: 8px; }
-      .story-actions button { flex: 1 1 50%; width: 50%; min-width: 0; padding: 9px 6px; }
+      .story-actions { flex-wrap: nowrap; gap: 6px; }
+      .story-actions button { flex: 1 1 33.333%; width: 33.333%; min-width: 0; padding: 9px 3px; font-size: 12px; }
       .bottom-actions { justify-content: stretch; }
       .bottom-actions button { width: 100%; }
     }
@@ -222,20 +222,14 @@
             <div class="field">
               <label for="story-status">Status</label>
               <select id="story-status">
-                <option value="draft">Entwurf</option>
-                <option value="planned">Geplant</option>
-                <option value="recorded">Aufgenommen</option>
-                <option value="published">Veröffentlicht</option>
+                <option value="planned">Planung</option>
+                <option value="recorded">Aufgezeichnet</option>
               </select>
             </div>
           </div>
           <div class="field">
             <label for="story-notes">Notizen für die Aufnahme</label>
             <textarea id="story-notes" placeholder="Zusammenfassung, wichtige Details, Gesprächsfragen …"></textarea>
-          </div>
-          <div class="checkline">
-            <input id="story-approved" type="checkbox">
-            <label for="story-approved">Für die öffentliche Website freigeben. Nur veröffentlichte und freigegebene Storys werden dort angezeigt.</label>
           </div>
           <div class="toolbar">
             <button id="save-button" type="submit">Story speichern</button>
@@ -373,8 +367,9 @@
             <div class="story-meta">Angelegt von: ${escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt'))}</div>
             <div class="story-actions">
               ${isWebsitePublished
-                ? '<span class="pill published" style="align-self:center">✓ Auf der Website sichtbar</span>'
+                ? `<button type="button" class="publish-button" disabled aria-label="Bereits veröffentlicht">✓ Veröffentlicht</button>`
                 : `<button type="button" class="publish-button" data-publish="${escapeHTML(s.id)}">${publishLabel}</button>`}
+              <button type="button" class="secondary" data-edit-button="${escapeHTML(s.id)}">Bearbeiten</button>
               <button type="button" class="danger" data-delete="${escapeHTML(s.id)}">Löschen</button>
             </div>
           </article>`;
@@ -418,10 +413,9 @@
     function resetForm() {
       $('story-form').reset();
       $('story-id').value = '';
-      $('story-status').value = 'draft';
+      $('story-status').value = 'planned';
       $('story-category').value = 'Kurioses';
       $('story-language').value = 'de';
-      $('story-approved').checked = false;
       $('editor-heading').textContent = 'Neue Story anlegen';
       $('save-button').textContent = 'Story speichern';
       $('cancel-edit').classList.add('hidden');
@@ -437,9 +431,8 @@
       $('story-category').value = s.category || 'Kurioses';
       $('story-language').value = s.language || 'de';
       $('story-episode').value = s.episode_number ?? '';
-      $('story-status').value = s.status || 'draft';
+      $('story-status').value = s.status === 'recorded' ? 'recorded' : 'planned';
       $('story-notes').value = s.notes || '';
-      $('story-approved').checked = !!s.approved_for_website;
       $('editor-heading').textContent = 'Story bearbeiten';
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
@@ -517,8 +510,7 @@
         episode_number: rawEpisode ? Number(rawEpisode) : null,
         description: $('story-description').value.trim(),
         notes: $('story-notes').value.trim(),
-        status,
-        approved_for_website: $('story-approved').checked,
+        status: id && stories.find(s => s.id === id)?.status === 'published' ? 'published' : status,
         updated_at: new Date().toISOString()
       };
       if (!id) {
@@ -578,14 +570,6 @@
       showListView();
     });
 
-    $('story-approved').addEventListener('change', (event) => {
-      if (!event.target.checked) return;
-      const confirmed = window.confirm(
-        'Achtung: Bitte gib diese Story nur für die öffentliche Website frei, wenn sie tatsächlich in einer bereits veröffentlichten Podcastfolge vorkam.\n\nWar die Story Teil einer veröffentlichten Folge?'
-      );
-      if (!confirmed) event.target.checked = false;
-    });
-
     $('cancel-edit').addEventListener('click', () => {
       resetForm();
       clearMessage();
@@ -594,8 +578,15 @@
 
     $('story-list').addEventListener('click', async (event) => {
       const publishButton = event.target.closest('[data-publish]');
+      const editButton = event.target.closest('[data-edit-button]');
       const deleteButton = event.target.closest('[data-delete]');
       const storyCard = event.target.closest('[data-edit]');
+
+      if (editButton) {
+        event.stopPropagation();
+        startEdit(editButton.dataset.editButton);
+        return;
+      }
 
       if (publishButton) {
         event.stopPropagation();
