@@ -332,22 +332,27 @@
       const target = $('next-episode-info');
       target.textContent = 'Wird aus dem RSS-Feed geladen …';
       try {
-        // Apple lookup liefert die offizielle RSS-Adresse des Podcasts.
-        const lookupResponse = await fetch('https://itunes.apple.com/lookup?id=1725187632');
-        if (!lookupResponse.ok) throw new Error('Podcast-Feed konnte nicht gefunden werden.');
-        const lookup = await lookupResponse.json();
-        const feedUrl = lookup.results?.[0]?.feedUrl;
-        if (!feedUrl) throw new Error('RSS-Adresse fehlt.');
-
-        // RSS-zu-JSON-Dienst, da Podcast-Hosts RSS im Browser häufig nicht direkt freigeben.
-        const rssResponse = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(feedUrl));
+        // Direkt den vom Nutzer angegebenen Spotify-for-Podcasters/Anchor-Feed verwenden.
+        const feedUrl = 'https://anchor.fm/s/1018d4e2c/podcast/rss';
+        // RSS-zu-JSON-Dienst, da Anchor RSS im Browser nicht zuverlässig direkt lesbar ist.
+        // Zeitstempel verhindert, dass eine alte zwischengespeicherte Feed-Antwort angezeigt wird.
+        const rssResponse = await fetch(
+          'https://api.rss2json.com/v1/api.json?count=100&rss_url=' +
+          encodeURIComponent(feedUrl) + '&_=' + Date.now()
+        );
         if (!rssResponse.ok) throw new Error('RSS-Feed ist gerade nicht erreichbar.');
         const rss = await rssResponse.json();
-        if (rss.status !== 'ok' || !Array.isArray(rss.items)) throw new Error('RSS-Feed konnte nicht gelesen werden.');
+        if (rss.status !== 'ok' || !Array.isArray(rss.items)) {
+          throw new Error(rss.message || 'RSS-Feed konnte nicht gelesen werden.');
+        }
 
         const now = Date.now();
         const upcoming = rss.items
-          .map(item => ({ item, date: new Date(item.pubDate).getTime() }))
+          .map(item => {
+            // RSS-Feeds können das Veröffentlichungsdatum je nach Parser unterschiedlich benennen.
+            const rawDate = item.pubDate || item.pubdate || item.isoDate || item.date;
+            return { item, date: rawDate ? new Date(rawDate).getTime() : NaN };
+          })
           .filter(entry => Number.isFinite(entry.date) && entry.date > now)
           .sort((a, b) => a.date - b.date)[0];
 
