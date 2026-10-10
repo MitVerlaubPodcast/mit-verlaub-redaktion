@@ -460,8 +460,7 @@
         const currentLink = links.find(link => link.episode && link.episode.status !== 'published');
         const publishedLink = links.find(link => link.episode && link.episode.status === 'published' && link.status === 'in_episode');
         const episodeLabel = publishedLink ? 'Veröffentlicht in Folge ' + publishedLink.episode.episode_number :
-          currentLink ? 'Folge ' + currentLink.episode.episode_number :
-          (s.episode_number ? 'Folge ' + s.episode_number + ' (Altbestand)' : 'Keine Folge zugeordnet');
+          currentLink ? 'Folge ' + currentLink.episode.episode_number : 'Keine Folge zugeordnet';
         const stateLabel = publishedLink ? 'Veröffentlicht' : currentLink ? (currentLink.status === 'archived' ? 'In Folge archiviert' : currentLink.status === 'in_episode' ? 'Für Folge ausgewählt' : 'Folge in Vorbereitung') : 'Im Archiv';
         const stateClass = publishedLink ? 'published' : currentLink ? 'planned' : '';
         const canAssign = !publishedLink && episodes.some(ep => ep.status !== 'published');
@@ -480,7 +479,7 @@
           '<div class="story-actions">' +
           (canAssign ? '<button type="button" class="secondary" data-toggle-assignment="' + escapeHTML(s.id) + '">' + (currentLink ? 'Folge ändern' : 'Folge zuordnen') + '</button>' : publishedLink ? '<span class="muted">Bereits veröffentlicht – Zuordnung bleibt erhalten.</span>' : '<span class="muted">Erstelle zuerst eine Folge, um sie zuzuordnen.</span>') +
           '<button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button><button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div>' +
-          (canAssign ? '<div class="assignment-panel hidden" data-assignment-panel="' + escapeHTML(s.id) + '" style="margin-top:12px;padding:12px;border:1px solid var(--border);border-radius:12px"><label for="assign-search-' + escapeHTML(s.id) + '">Folge suchen</label><input id="assign-search-' + escapeHTML(s.id) + '" type="search" data-assignment-search="' + escapeHTML(s.id) + '" placeholder="Folgenummer oder Titel eingeben" style="margin:6px 0 10px"><label for="assign-select-' + escapeHTML(s.id) + '">Folge auswählen</label><select id="assign-select-' + escapeHTML(s.id) + '" data-assignment-select="' + escapeHTML(s.id) + '" style="margin:6px 0 10px"><option value="">Folge auswählen …</option>' + options + '</select><div class="story-actions"><button type="button" data-assign-story="' + escapeHTML(s.id) + '">Zuordnung speichern</button><button type="button" class="secondary" data-cancel-assignment="' + escapeHTML(s.id) + '">Abbrechen</button></div></div>' : '') +
+          (canAssign ? '<div class="assignment-panel hidden" data-assignment-panel="' + escapeHTML(s.id) + '" style="margin-top:12px;padding:12px;border:1px solid #e7e7e7;border-radius:12px"><label for="assign-search-' + escapeHTML(s.id) + '">Folge suchen</label><input id="assign-search-' + escapeHTML(s.id) + '" type="search" data-assignment-search="' + escapeHTML(s.id) + '" placeholder="Folgenummer oder Titel eingeben" style="margin:6px 0 10px"><label for="assign-select-' + escapeHTML(s.id) + '">Folge auswählen</label><select id="assign-select-' + escapeHTML(s.id) + '" data-assignment-select="' + escapeHTML(s.id) + '" style="margin:6px 0 10px"><option value="">Folge auswählen …</option>' + options + '</select><div class="story-actions"><button type="button" data-assign-story="' + escapeHTML(s.id) + '">Zuordnung speichern</button><button type="button" class="secondary" data-cancel-assignment="' + escapeHTML(s.id) + '">Abbrechen</button></div></div>' : '') +
           '</article>';
       }).join('');
     }
