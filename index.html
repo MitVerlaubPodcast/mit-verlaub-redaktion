@@ -670,7 +670,7 @@
       updateStoryEpisodeOptions($('story-episode-select')?.value || '');
       const { data: links, error: linksError } = await db
         .from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,top_comments,translation_notes,reddit_url,category,language,created_by,status,episode_number)');
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)');
       if (linksError) {
         $('episode-list').innerHTML = '<p class="empty">Die Folgen-Storys konnten nicht geladen werden: ' + escapeHTML(linksError.message) + '</p>';
         episodeLinks = [];
@@ -876,7 +876,7 @@
 
     async function loadEpisodeWorkspace() {
       const { data, error } = await db.from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,top_comments,translation_notes,reddit_url,category,language,created_by,status,episode_number)')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)')
         .eq('episode_id', activeEpisode.id).order('position', { ascending: true }).order('created_at', { ascending: true });
       if (error) { showMessage('Storys dieser Folge konnten nicht geladen werden: ' + error.message, 'error'); return; }
       episodeLinkRows = (data || []).map(link => ({
@@ -1218,10 +1218,21 @@
       button.textContent = 'Wird gespeichert …';
 
       let result;
+      let internalFieldsUnavailable = false;
       if (id) {
         result = await db.from('stories').update(payload).eq('id', id).select();
       } else {
         result = await db.from('stories').insert(payload).select();
+      }
+      // Fallback until the one-time Supabase migration has been applied.
+      if (result.error && /top_comments|translation_notes|column .* does not exist/i.test(result.error.message || '')) {
+        internalFieldsUnavailable = true;
+        const legacyPayload = { ...payload };
+        delete legacyPayload.top_comments;
+        delete legacyPayload.translation_notes;
+        result = id
+          ? await db.from('stories').update(legacyPayload).eq('id', id).select()
+          : await db.from('stories').insert(legacyPayload).select();
       }
 
       button.disabled = false;
@@ -1257,7 +1268,9 @@
       resetForm();
       await loadAll();
       showHomeView('database');
-      showMessage((id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.') + assignmentWarning, assignmentWarning ? 'error' : 'success');
+      showMessage((id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.') + assignmentWarning + (internalFieldsUnavailable
+        ? ' WICHTIG: Top-Kommentare und Übersetzung wurden noch nicht gespeichert. Bitte die SQL-Migration aus supabase/migrations/202610110001_add_story_internal_fields.sql im Supabase SQL Editor ausführen.'
+        : ''), internalFieldsUnavailable || assignmentWarning ? 'error' : 'success');
     });
 
     $('new-story-button').addEventListener('click', () => {
