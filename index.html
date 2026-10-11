@@ -88,6 +88,8 @@
     .story { border: 1px solid #e7e7e7; border-radius: 12px; padding: 13px 16px; margin-top: 10px; cursor: pointer; transition: border-color .15s, background .15s; }
     .story:hover { border-color: #999; background: #fcfcfc; }
     .story h3 { margin-bottom: 0; }
+    .story-title-assignment { display:inline; border:0; padding:0; margin:0; background:transparent; color:inherit; font:inherit; font-weight:bold; text-align:left; white-space:normal; overflow-wrap:anywhere; }
+    .story-title-assignment:hover { background:transparent; text-decoration:underline; }
     .story-actions { display: flex; gap: 8px; margin-top: 10px; }
     .story-actions button { font-size: 13px; padding: 7px 10px; }
     .story p { line-height: 1.45; overflow-wrap: anywhere; }
@@ -524,7 +526,9 @@
           '<option value="' + escapeHTML(ep.id) + '"' + (currentLink && currentLink.episode_id === ep.id ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</option>'
         ).join('');
         return '<article class="story" data-story-card="' + escapeHTML(s.id) + '">' +
-          '<div class="topbar"><div style="min-width:0"><h3>' + escapeHTML(s.title) + '</h3><div class="pills">' +
+          '<div class="topbar"><div style="min-width:0"><h3>' +
+          (canAssign ? '<button type="button" class="story-title-assignment" data-toggle-assignment="' + escapeHTML(s.id) + '">' + escapeHTML(s.title) + '</button>' : escapeHTML(s.title)) +
+          '</h3><div class="pills">' +
           '<span class="pill ' + stateClass + '">' + stateLabel + '</span>' +
           '<span class="pill">' + escapeHTML(s.category || 'Sonstiges') + '</span>' +
           '<span class="pill">' + (s.language === 'en' ? 'Englisch' : s.language === 'de' ? 'Deutsch' : 'Andere Sprache') + '</span>' +
@@ -1328,23 +1332,9 @@
         return;
       }
 
-      if (storyCard) {
-        // Auf Touch-Geräten führt ein Tipp auf den Story-Eintrag bei nicht zugeordneten
-        // Storys direkt zur Folgenzuordnung. Bearbeiten bleibt eine explizite Aktion.
-        if (event.target.closest('a, button, input, select, textarea, label')) return;
-        const storyId = storyCard.dataset.storyCard;
-        const story = stories.find(item => item.id === storyId);
-        if (!story) return;
-        const panel = $('story-list').querySelector('[data-assignment-panel="' + storyId + '"]');
-        if (panel) {
-          event.preventDefault();
-          panel.classList.toggle('hidden');
-          if (!panel.classList.contains('hidden')) {
-            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            panel.querySelector('select')?.focus({ preventScroll: true });
-          }
-        }
-      }
+      // Die Story-Karte selbst öffnet niemals die Bearbeitungsmaske.
+      // Zuordnen geht ausdrücklich über den Storytitel oder „Folge zuordnen“;
+      // Bearbeiten nur über die separate Schaltfläche „Bearbeiten“.
     });
 
     ['search-filter', 'status-filter', 'category-filter', 'history-filter'].forEach(id => {
