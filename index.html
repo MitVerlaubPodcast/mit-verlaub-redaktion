@@ -521,9 +521,11 @@
           currentLink ? 'Folge ' + currentLink.episode.episode_number : 'Keine Folge zugeordnet';
         const stateLabel = publishedLink ? 'Veröffentlicht' : currentLink ? (currentLink.status === 'archived' ? 'In Folge archiviert' : currentLink.status === 'in_episode' ? 'Für Folge ausgewählt' : 'Folge in Vorbereitung') : 'Im Archiv';
         const stateClass = publishedLink ? 'published' : currentLink ? 'planned' : '';
-        const canAssign = !publishedLink && episodes.some(ep => ep.status !== 'published');
-        const options = episodes.filter(ep => ep.status !== 'published').map(ep =>
-          '<option value="' + escapeHTML(ep.id) + '"' + (currentLink && currentLink.episode_id === ep.id ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</option>'
+        // Bereits veröffentlichte Folgen sollen für nachträgliche Zuordnungen ebenfalls auswählbar sein.
+        // Nur Storys, die schon Teil einer veröffentlichten Folge sind, bleiben unveränderlich.
+        const canAssign = !publishedLink && episodes.length > 0;
+        const options = [...episodes].sort((a, b) => Number(b.episode_number) - Number(a.episode_number)).map(ep =>
+          '<option value="' + escapeHTML(ep.id) + '"' + (currentLink && currentLink.episode_id === ep.id ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + (ep.status === 'published' ? ' · veröffentlicht' : '') + '</option>'
         ).join('');
         return '<article class="story" data-story-card="' + escapeHTML(s.id) + '">' +
           '<div class="topbar"><div style="min-width:0"><h3>' +
