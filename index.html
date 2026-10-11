@@ -523,7 +523,7 @@
         const options = episodes.filter(ep => ep.status !== 'published').map(ep =>
           '<option value="' + escapeHTML(ep.id) + '"' + (currentLink && currentLink.episode_id === ep.id ? ' selected' : '') + '>Folge ' + escapeHTML(ep.episode_number) + (ep.title && ep.title !== 'Folge ' + ep.episode_number ? ' – ' + escapeHTML(ep.title) : '') + '</option>'
         ).join('');
-        return '<article class="story" data-edit="' + escapeHTML(s.id) + '">' +
+        return '<article class="story" data-story-card="' + escapeHTML(s.id) + '">' +
           '<div class="topbar"><div style="min-width:0"><h3>' + escapeHTML(s.title) + '</h3><div class="pills">' +
           '<span class="pill ' + stateClass + '">' + stateLabel + '</span>' +
           '<span class="pill">' + escapeHTML(s.category || 'Sonstiges') + '</span>' +
@@ -1238,7 +1238,7 @@
       const publishButton = event.target.closest('[data-publish]');
       const editButton = event.target.closest('[data-edit-button]');
       const deleteButton = event.target.closest('[data-delete]');
-      const storyCard = event.target.closest('[data-edit]');
+      const storyCard = event.target.closest('[data-story-card]');
       const assignButton = event.target.closest('[data-assign-story]');
       const toggleAssignment = event.target.closest('[data-toggle-assignment]');
       const cancelAssignment = event.target.closest('[data-cancel-assignment]');
@@ -1328,7 +1328,23 @@
         return;
       }
 
-      if (storyCard) startEdit(storyCard.dataset.edit);
+      if (storyCard) {
+        // Auf Touch-Geräten führt ein Tipp auf den Story-Eintrag bei nicht zugeordneten
+        // Storys direkt zur Folgenzuordnung. Bearbeiten bleibt eine explizite Aktion.
+        if (event.target.closest('a, button, input, select, textarea, label')) return;
+        const storyId = storyCard.dataset.storyCard;
+        const story = stories.find(item => item.id === storyId);
+        if (!story) return;
+        const panel = $('story-list').querySelector('[data-assignment-panel="' + storyId + '"]');
+        if (panel) {
+          event.preventDefault();
+          panel.classList.toggle('hidden');
+          if (!panel.classList.contains('hidden')) {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            panel.querySelector('select')?.focus({ preventScroll: true });
+          }
+        }
+      }
     });
 
     ['search-filter', 'status-filter', 'category-filter', 'history-filter'].forEach(id => {
