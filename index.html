@@ -1379,9 +1379,11 @@
         return;
       }
 
-      // Die Story-Karte selbst öffnet niemals die Bearbeitungsmaske.
-      // Zuordnen geht ausdrücklich über den Storytitel oder „Folge zuordnen“;
-      // Bearbeiten nur über die separate Schaltfläche „Bearbeiten“.
+      if (storyCard && !event.target.closest('button, a, input, select, textarea, label, [data-assignment-panel]')) {
+        openStoryDetails(storyCard.dataset.storyCard);
+      }
+
+      // Story-Karten öffnen die schreibgeschützte Detailansicht; Bearbeiten bleibt separat.
     });
 
     ['search-filter', 'status-filter', 'category-filter', 'history-filter'].forEach(id => {
