@@ -20,7 +20,7 @@
       text-align: center;
       padding: 28px 16px;
     }
-    header h1 { margin: 0 0 8px; font-size: 34px; }
+    header h1 { margin: 0 0 8px; font-size: 34px; cursor: pointer; }\n    header h1:focus-visible { outline: 2px solid #fff; outline-offset: 5px; border-radius: 3px; }
     header p { margin: 0; color: #ccc; }
     main { max-width: 1100px; margin: 28px auto; padding: 0 16px 40px; }
     .card {
@@ -188,7 +188,7 @@
 </head>
 <body>
   <header>
-    <h1>Mit Verlaub – Redaktion</h1>
+    <h1 id="home-header-link" role="link" tabindex="0" aria-label="Zur Startseite">Mit Verlaub – Redaktion</h1>
     <p>Die wildesten Reddit Storys aus dem Podcast</p>
   </header>
 
@@ -237,7 +237,7 @@
           <div class="toolbar" style="flex:0 0 auto">
             <button id="new-story-button" type="button">+ Story anlegen</button>
             <button id="new-episode-button" class="secondary" type="button">+ Folge erstellen</button>
-            <button id="show-episodes-tab" class="secondary" type="button">Folgen bearbeiten</button>
+            <button id="show-episodes-tab" class="secondary" type="button">Alle Folgen</button>
             <button id="refresh-button" class="secondary" type="button">Aktualisieren</button>
           </div>
         </div>
@@ -249,7 +249,7 @@
       <section class="card hidden" id="episode-editor-card">
         <div class="topbar" style="margin-bottom:18px">
           <div><h2 id="episode-editor-heading" style="margin:0">Folge erstellen</h2><p id="episode-editor-status" class="muted" style="margin:6px 0 0"></p></div>
-          <button id="episode-back-button" class="secondary" type="button">← Zurück zu den Folgen</button>
+          <button id="episode-back-button" class="secondary" type="button">← Zur Startseite</button>
         </div>
         <form id="episode-form">
           <input id="episode-id" type="hidden">
@@ -1119,8 +1119,21 @@
       await openEpisode(newest.id);
     });
     $('new-episode-button').addEventListener('click', createEpisode);
-    $('episode-back-button').addEventListener('click', async () => { await loadEpisodes(); showHomeView('episodes'); });
+    $('episode-back-button').addEventListener('click', async () => { await loadAll(); showHomeView('database'); });
     $('show-episodes-tab').addEventListener('click', () => showHomeView('episodes'));
+    const homeHeaderLink = $('home-header-link');
+    const returnToHome = async () => {
+      if (!currentUser) return;
+      await loadAll();
+      showHomeView('database');
+    };
+    homeHeaderLink.addEventListener('click', returnToHome);
+    homeHeaderLink.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        returnToHome();
+      }
+    });
 
     async function loadAll() {
       if (!currentUser) return;
