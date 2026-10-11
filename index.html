@@ -132,6 +132,9 @@
     .story-detail-modal { background:#fff; width:min(720px,100%); max-height:90vh; overflow:auto; border-radius:16px; padding:22px; box-shadow:0 12px 50px #0004; }
     .story-detail-modal .detail-value { white-space:pre-wrap; overflow-wrap:anywhere; background:#f6f6f6; border-radius:8px; padding:10px 12px; margin:6px 0 14px; line-height:1.45; }
     .story-detail-modal .detail-label { color:#666; font-size:12px; font-weight:bold; margin-top:12px; }
+    .story-detail-modal .detail-value a { overflow-wrap:anywhere; }
+    .story-detail-actions { position:sticky; bottom:-22px; display:flex; justify-content:flex-end; gap:8px; margin:22px -22px -22px; padding:14px 22px; border-top:1px solid #e5e5e5; background:rgba(255,255,255,.97); border-radius:0 0 14px 14px; }
+    .story-detail-actions button { margin:0; }
     .story-detail-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
     .section-kicker { color:#777; text-transform:uppercase; letter-spacing:.08em; font-size:11px; font-weight:bold; margin:18px 0 4px; }
     .episode-form-grid { display:grid; grid-template-columns:160px minmax(0,1fr); gap:14px; }
@@ -285,21 +288,25 @@
             <button id="finalize-episode-button" class="publish-button" type="button" disabled>Folge veröffentlichen</button>
           </div>
         </div>
-        <div id="story-detail-backdrop" class="story-detail-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="story-detail-title">
-          <div class="story-detail-modal">
-            <div class="story-detail-top">
-              <div><div class="section-kicker" style="margin-top:0">Story-Details</div><h2 id="story-detail-title" style="margin-bottom:0">Story</h2></div>
-              <button id="close-story-detail" type="button" class="secondary">Schließen ✕</button>
-            </div>
-            <div class="detail-label">Vorschautext</div><div id="detail-description" class="detail-value"></div>
-            <div class="detail-label">Kategorie</div><div id="detail-category" class="detail-value"></div>
-            <div class="detail-label">Sprache</div><div id="detail-language" class="detail-value"></div>
-            <div class="detail-label">Notizen für die Aufnahme</div><div id="detail-notes" class="detail-value"></div>
-            <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
-            <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
-          </div>
-        </div>
       </section>
+      <div id="story-detail-backdrop" class="story-detail-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="story-detail-title">
+        <div class="story-detail-modal">
+          <div class="story-detail-top">
+            <div><div class="section-kicker" style="margin-top:0">Story-Details · interne Ansicht</div><h2 id="story-detail-title" style="margin-bottom:0">Story</h2></div>
+            <button id="close-story-detail" type="button" class="secondary">Schließen ✕</button>
+          </div>
+          <div class="detail-label">Status & Folgenzuordnung</div><div id="detail-status" class="detail-value"></div>
+          <div class="detail-label">Vorschautext</div><div id="detail-description" class="detail-value"></div>
+          <div class="detail-label">Kategorie</div><div id="detail-category" class="detail-value"></div>
+          <div class="detail-label">Sprache der Originalstory</div><div id="detail-language" class="detail-value"></div>
+          <div class="detail-label">Notizen für die Aufnahme</div><div id="detail-notes" class="detail-value"></div>
+          <div class="detail-label">Top-Kommentare · nur intern</div><div id="detail-top-comments" class="detail-value"></div>
+          <div class="detail-label">Übersetzung / Arbeitsfassung · nur intern</div><div id="detail-translation-notes" class="detail-value"></div>
+          <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
+          <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
+          <div class="story-detail-actions"><button id="edit-story-from-detail" type="button">Story bearbeiten</button></div>
+        </div>
+      </div>
 
       <section class="card hidden" id="editor-card">
         <div class="topbar" style="margin-bottom:18px"><h2 id="editor-heading" style="margin:0">Neue Story anlegen</h2><button id="back-to-list" class="secondary" type="button">← Zurück zur Übersicht</button></div>
@@ -354,6 +361,16 @@
           <div class="field">
             <label for="story-notes">Notizen für die Aufnahme</label>
             <textarea id="story-notes" placeholder="Zusammenfassung, wichtige Details, Gesprächsfragen …"></textarea>
+          </div>
+          <div class="field">
+            <label for="story-top-comments">Top-Kommentare · interne Orga</label>
+            <textarea id="story-top-comments" placeholder="Links, Zitate oder Stichpunkte zu besonders guten Kommentaren …"></textarea>
+            <p class="muted" style="margin:6px 0 0">Nur für eure interne Vorbereitung, nicht für die öffentliche Website.</p>
+          </div>
+          <div class="field">
+            <label for="story-translation-notes">Übersetzung / Arbeitsfassung · interne Orga</label>
+            <textarea id="story-translation-notes" style="min-height:220px" placeholder="Übersetzung, längere Textpassagen, offene Fragen oder weitere Arbeitsnotizen …"></textarea>
+            <p class="muted" style="margin:6px 0 0">Großes Freitextfeld für Übersetzungen und längere Arbeitsfassungen.</p>
           </div>
           <div class="toolbar">
             <button id="save-button" type="submit">Story speichern</button>
@@ -529,7 +546,7 @@
         ).join('');
         return '<article class="story" data-story-card="' + escapeHTML(s.id) + '">' +
           '<div class="topbar"><div style="min-width:0"><h3>' +
-          (canAssign ? '<button type="button" class="story-title-assignment" data-toggle-assignment="' + escapeHTML(s.id) + '">' + escapeHTML(s.title) + '</button>' : escapeHTML(s.title)) +
+          '<button type="button" class="story-title-assignment" data-open-story="' + escapeHTML(s.id) + '">' + escapeHTML(s.title) + '</button>' +
           '</h3><div class="pills">' +
           '<span class="pill ' + stateClass + '">' + stateLabel + '</span>' +
           '<span class="pill">' + escapeHTML(s.category || 'Sonstiges') + '</span>' +
@@ -540,7 +557,7 @@
           '<div class="story-meta">Vorgeschlagen von: ' + escapeHTML(s.created_by_email || (s.created_by === currentUser?.id ? currentUser.email : 'Unbekannt')) + '</div>' +
           '<div class="story-actions">' +
           (canAssign ? '<button type="button" class="secondary" data-toggle-assignment="' + escapeHTML(s.id) + '">' + (currentLink ? 'Folge ändern' : 'Folge zuordnen') + '</button>' : publishedLink ? '<span class="muted">Bereits veröffentlicht – Zuordnung bleibt erhalten.</span>' : '<span class="muted">Erstelle zuerst eine Folge, um sie zuzuordnen.</span>') +
-          '<button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button><button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div>' +
+          '<button type="button" class="secondary" data-open-story="' + escapeHTML(s.id) + '">Details</button><button type="button" class="secondary" data-edit-button="' + escapeHTML(s.id) + '">Bearbeiten</button><button type="button" class="danger" data-delete="' + escapeHTML(s.id) + '">Löschen</button></div>' +
           (canAssign ? '<div class="assignment-panel hidden" data-assignment-panel="' + escapeHTML(s.id) + '" style="margin-top:12px;padding:12px;border:1px solid #e7e7e7;border-radius:12px"><label for="assign-select-' + escapeHTML(s.id) + '">Folge auswählen</label><select id="assign-select-' + escapeHTML(s.id) + '" data-assignment-select="' + escapeHTML(s.id) + '" style="margin:6px 0 10px"><option value="">Folge auswählen …</option>' + options + '</select><div class="story-actions"><button type="button" data-assign-story="' + escapeHTML(s.id) + '">Zuordnung speichern</button><button type="button" class="secondary" data-cancel-assignment="' + escapeHTML(s.id) + '">Abbrechen</button></div></div>' : '') +
           '</article>';
       }).join('');
@@ -585,6 +602,8 @@
       $('story-status').value = 'planned';
       $('story-episode').value = '';
       $('story-episode-select').value = '';
+      $('story-top-comments').value = '';
+      $('story-translation-notes').value = '';
       $('story-episode-field').classList.remove('hidden');
       $('story-category').value = 'Kurioses';
       $('story-language').value = 'de';
@@ -608,6 +627,8 @@
       $('story-episode-field').classList.add('hidden');
       $('story-status').value = s.status === 'recorded' ? 'recorded' : 'planned';
       $('story-notes').value = s.description ? (s.notes || '') : '';
+      $('story-top-comments').value = s.top_comments || '';
+      $('story-translation-notes').value = s.translation_notes || '';
       $('editor-heading').textContent = 'Story bearbeiten';
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
@@ -649,7 +670,7 @@
       updateStoryEpisodeOptions($('story-episode-select')?.value || '');
       const { data: links, error: linksError } = await db
         .from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)');
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,top_comments,translation_notes,reddit_url,category,language,created_by,status,episode_number)');
       if (linksError) {
         $('episode-list').innerHTML = '<p class="empty">Die Folgen-Storys konnten nicht geladen werden: ' + escapeHTML(linksError.message) + '</p>';
         episodeLinks = [];
@@ -818,13 +839,24 @@
 
     function openStoryDetails(storyId) {
       const link = episodeLinkRows.find(row => row.story_id === storyId);
-      const story = link?.story || stories.find(item => item.id === storyId);
+      const story = stories.find(item => item.id === storyId) || link?.story;
       if (!story) return;
+      const storyLinks = episodeLinks.filter(row => row.story_id === storyId);
+      const activeLinks = storyLinks.filter(row => row.episode && row.status !== 'archived');
+      const episodeText = activeLinks.length
+        ? activeLinks.map(row => 'Folge ' + row.episode.episode_number + (row.episode.title ? ' – ' + row.episode.title : '') + (row.episode.status === 'published' ? ' (veröffentlicht)' : '')).join('\n')
+        : 'Noch keiner Folge zugeordnet';
+      const stateText = story.status === 'published' || activeLinks.some(row => row.episode.status === 'published')
+        ? 'Veröffentlicht'
+        : story.status === 'recorded' ? 'Aufgezeichnet' : 'In Planung';
       $('story-detail-title').textContent = story.title || 'Story';
+      $('detail-status').textContent = stateText + '\n' + episodeText;
       $('detail-description').textContent = story.description || 'Kein Vorschautext hinterlegt.';
       $('detail-category').textContent = story.category || 'Sonstiges';
       $('detail-language').textContent = story.language === 'en' ? 'Englisch' : story.language === 'de' ? 'Deutsch' : 'Andere Sprache';
       $('detail-notes').textContent = story.notes || 'Keine Notizen für die Aufnahme hinterlegt.';
+      $('detail-top-comments').textContent = story.top_comments || 'Noch keine Top-Kommentare gesammelt.';
+      $('detail-translation-notes').textContent = story.translation_notes || 'Noch keine Übersetzung oder Arbeitsfassung hinterlegt.';
       $('detail-reddit').replaceChildren();
       if (story.reddit_url) {
         const anchor = document.createElement('a');
@@ -836,15 +868,15 @@
       } else {
         $('detail-reddit').textContent = 'Kein Reddit-Link hinterlegt.';
       }
-      const author = story.created_by_email || (story.created_by === currentUser?.id ? 'Patrick' : 'Rahel');
+      const author = story.created_by_email || (story.created_by === currentUser?.id ? currentUser.email : 'Unbekannt');
       $('detail-author').textContent = author || 'Unbekannt';
+      $('edit-story-from-detail').dataset.storyId = storyId;
       $('story-detail-backdrop').classList.remove('hidden');
     }
 
-
     async function loadEpisodeWorkspace() {
       const { data, error } = await db.from('episode_stories')
-        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,reddit_url,category,language,created_by,status,episode_number)')
+        .select('id,episode_id,story_id,status,proposed_by,proposed_by_email,position,created_at,updated_at,episode:episodes(id,episode_number,title,status),story:stories(id,title,description,notes,top_comments,translation_notes,reddit_url,category,language,created_by,status,episode_number)')
         .eq('episode_id', activeEpisode.id).order('position', { ascending: true }).order('created_at', { ascending: true });
       if (error) { showMessage('Storys dieser Folge konnten nicht geladen werden: ' + error.message, 'error'); return; }
       episodeLinkRows = (data || []).map(link => ({
@@ -978,6 +1010,11 @@
       showMessage(ids.length === 1 ? 'Story zur Folge hinzugefügt.' : ids.length + ' Storys zur Folge hinzugefügt.');
     });
     $('close-story-detail').addEventListener('click', () => $('story-detail-backdrop').classList.add('hidden'));
+    $('edit-story-from-detail').addEventListener('click', () => {
+      const storyId = $('edit-story-from-detail').dataset.storyId;
+      $('story-detail-backdrop').classList.add('hidden');
+      if (storyId) startEdit(storyId);
+    });
     $('story-detail-backdrop').addEventListener('click', event => {
       if (event.target === $('story-detail-backdrop')) $('story-detail-backdrop').classList.add('hidden');
     });
@@ -1160,6 +1197,8 @@
         language: $('story-language').value,
         description: $('story-description').value.trim(),
         notes: $('story-notes').value.trim(),
+        top_comments: $('story-top-comments').value.trim(),
+        translation_notes: $('story-translation-notes').value.trim(),
         updated_at: new Date().toISOString()
       };
       if (!id) {
@@ -1248,7 +1287,13 @@
       const assignButton = event.target.closest('[data-assign-story]');
       const toggleAssignment = event.target.closest('[data-toggle-assignment]');
       const cancelAssignment = event.target.closest('[data-cancel-assignment]');
+      const openStoryButton = event.target.closest('[data-open-story]');
 
+      if (openStoryButton) {
+        event.stopPropagation();
+        openStoryDetails(openStoryButton.dataset.openStory);
+        return;
+      }
       if (toggleAssignment || cancelAssignment) {
         event.stopPropagation();
         const id = toggleAssignment ? toggleAssignment.dataset.toggleAssignment : cancelAssignment.dataset.cancelAssignment;
