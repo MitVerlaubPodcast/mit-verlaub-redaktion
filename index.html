@@ -1339,7 +1339,7 @@
       showHomeView('database');
       showMessage((id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.') + aiMessage + assignmentWarning + (internalFieldsUnavailable
         ? ' WICHTIG: Top-Kommentare und Übersetzung wurden noch nicht gespeichert. Bitte die SQL-Migration aus supabase/migrations/202610110001_add_story_internal_fields.sql im Supabase SQL Editor ausführen.'
-        : ''), internalFieldsUnavailable || assignmentWarning ? 'error' : 'success');
+        : ''), internalFieldsUnavailable || assignmentWarning || /nicht vollständig|unvollständig|fehlgeschlagen/i.test(aiMessage) ? 'error' : 'success');
     });
 
     $('new-story-button').addEventListener('click', () => {
