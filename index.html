@@ -302,9 +302,13 @@
           <div class="detail-label">Notizen für die Aufnahme</div><div id="detail-notes" class="detail-value"></div>
           <div class="detail-label">Top-Kommentare · nur intern</div><div id="detail-top-comments" class="detail-value"></div>
           <div class="detail-label">Übersetzung / Arbeitsfassung · nur intern</div><div id="detail-translation-notes" class="detail-value"></div>
+          <div class="detail-label">KI-Analyse · Lesezeit</div><div id="detail-reading-time" class="detail-value">Noch nicht analysiert.</div>
+          <div class="detail-label">KI-Zusammenfassung</div><div id="detail-ai-summary" class="detail-value">Wird nach dem Anlegen automatisch erstellt.</div>
+          <div class="detail-label">Updates / Nachträge</div><div id="detail-ai-updates" class="detail-value">Noch nicht geprüft.</div>
+          <div class="detail-label">Vorschläge für Diskussionsfragen</div><div id="detail-ai-questions" class="detail-value">Noch nicht erstellt.</div>
           <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
           <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
-          <div class="story-detail-actions"><button id="edit-story-from-detail" type="button">Story bearbeiten</button></div>
+          <div class="story-detail-actions"><button id="edit-story-from-detail" type="button">Story bearbeiten</button><button id="reanalyze-story-from-detail" class="secondary" type="button">KI-Analyse erneut starten</button></div>
         </div>
       </div>
 
@@ -870,7 +874,24 @@
       }
       const author = story.created_by_email || (story.created_by === currentUser?.id ? currentUser.email : 'Unbekannt');
       $('detail-author').textContent = author || 'Unbekannt';
+      const analysisStatus = story.ai_analysis_status || 'not_started';
+      const statusLabels = { not_started: 'Noch nicht gestartet', processing: 'Analyse läuft …', completed: 'Analyse abgeschlossen', partial: 'Teilweise analysiert', failed: 'Analyse fehlgeschlagen' };
+      const readingParts = [];
+      if (Number.isFinite(Number(story.story_word_count)) && story.story_word_count !== null) readingParts.push(Number(story.story_word_count).toLocaleString('de-DE') + ' Wörter');
+      if (story.story_reading_minutes != null) readingParts.push('Still lesen: ca. ' + story.story_reading_minutes + ' Min.');
+      if (story.story_read_aloud_minutes != null) readingParts.push('Laut vorlesen: ca. ' + story.story_read_aloud_minutes + ' Min.');
+      readingParts.push(statusLabels[analysisStatus] || analysisStatus);
+      if (story.ai_analyzed_at) readingParts.push('Stand: ' + new Date(story.ai_analyzed_at).toLocaleString('de-DE'));
+      if (story.ai_analysis_error) readingParts.push('Hinweis: ' + story.ai_analysis_error);
+      $('detail-reading-time').textContent = readingParts.join('\n') || 'Noch keine Textdaten verfügbar.';
+      $('detail-ai-summary').textContent = story.ai_summary || (analysisStatus === 'processing' ? 'Die KI erstellt die Zusammenfassung …' : 'Noch keine Zusammenfassung verfügbar.');
+      const updateLabels = { found: 'Möglicher Update-/Nachtrag-Hinweis gefunden', none_found: 'Kein eindeutiges Update im abrufbaren Text erkannt', unknown: 'Konnte nicht zuverlässig geprüft werden' };
+      $('detail-ai-updates').textContent = (updateLabels[story.ai_updates_status] || 'Noch nicht geprüft') + (story.ai_updates_note ? '\n' + story.ai_updates_note : '');
+      const questions = Array.isArray(story.ai_questions) ? story.ai_questions : [];
+      $('detail-ai-questions').textContent = questions.length ? questions.map((q, i) => (i + 1) + '. ' + q).join('\n') : 'Noch keine Diskussionsfragen verfügbar.';
       $('edit-story-from-detail').dataset.storyId = storyId;
+      $('reanalyze-story-from-detail').dataset.storyId = storyId;
+      $('reanalyze-story-from-detail').disabled = analysisStatus === 'processing';
       $('story-detail-backdrop').classList.remove('hidden');
     }
 
@@ -1010,6 +1031,27 @@
       showMessage(ids.length === 1 ? 'Story zur Folge hinzugefügt.' : ids.length + ' Storys zur Folge hinzugefügt.');
     });
     $('close-story-detail').addEventListener('click', () => $('story-detail-backdrop').classList.add('hidden'));
+    $('reanalyze-story-from-detail').addEventListener('click', async () => {
+      const storyId = $('reanalyze-story-from-detail').dataset.storyId;
+      if (!storyId || !currentUser) return;
+      const button = $('reanalyze-story-from-detail');
+      button.disabled = true;
+      button.textContent = 'Analyse läuft …';
+      try {
+        const { data, error } = await db.functions.invoke('analyze-story', { body: { story_id: storyId } });
+        if (error) throw error;
+        await loadAll();
+        const refreshed = stories.find(story => story.id === storyId);
+        if (refreshed) openStoryDetails(storyId);
+        showMessage(data?.status === 'completed' ? 'KI-Analyse aktualisiert.' : 'KI-Analyse nur teilweise möglich: ' + (data?.message || 'Details in der Story ansehen.'), data?.status === 'completed' ? 'success' : 'error');
+      } catch (error) {
+        showMessage('KI-Analyse fehlgeschlagen: ' + (error?.message || 'Unbekannter Fehler'), 'error');
+      } finally {
+        button.disabled = false;
+        button.textContent = 'KI-Analyse erneut starten';
+      }
+    });
+
     $('edit-story-from-detail').addEventListener('click', () => {
       const storyId = $('edit-story-from-detail').dataset.storyId;
       $('story-detail-backdrop').classList.add('hidden');
@@ -1278,10 +1320,24 @@
         }
       }
 
+      let aiMessage = '';
+      try {
+        showMessage((id ? 'Story gespeichert.' : 'Story angelegt.') + ' Die automatische KI-Analyse läuft …');
+        const { data: analysis, error: analysisError } = await db.functions.invoke('analyze-story', { body: { story_id: result.data[0].id } });
+        if (analysisError) throw analysisError;
+        if (analysis?.status === 'completed') {
+          aiMessage = ' Lesezeit, Zusammenfassung, Update-Hinweis und Diskussionsfragen wurden erstellt.';
+        } else {
+          aiMessage = ' Die Story wurde gespeichert, die KI-Analyse ist aber unvollständig: ' + (analysis?.message || 'Bitte in den Story-Details prüfen.');
+        }
+      } catch (analysisError) {
+        aiMessage = ' Die Story wurde gespeichert, aber die KI-Analyse konnte nicht vollständig ausgeführt werden. Öffne die Story-Details und starte die Analyse erneut. Details: ' + (analysisError?.message || 'Unbekannter Fehler');
+      }
+
       resetForm();
       await loadAll();
       showHomeView('database');
-      showMessage((id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.') + assignmentWarning + (internalFieldsUnavailable
+      showMessage((id ? 'Story erfolgreich aktualisiert.' : 'Story erfolgreich angelegt.') + aiMessage + assignmentWarning + (internalFieldsUnavailable
         ? ' WICHTIG: Top-Kommentare und Übersetzung wurden noch nicht gespeichert. Bitte die SQL-Migration aus supabase/migrations/202610110001_add_story_internal_fields.sql im Supabase SQL Editor ausführen.'
         : ''), internalFieldsUnavailable || assignmentWarning ? 'error' : 'success');
     });
