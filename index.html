@@ -1222,11 +1222,12 @@
         pendingAiSource = source;
         if (activeAiStoryId) {
           await loadStories(); const story = stories.find(item => item.id === activeAiStoryId);
-          activeAiResult = story ? { original_text: story.ai_original_text || data.original_text, short_text: story.ai_short_text || data.short_text, strongly_short_text: story.ai_strongly_short_text || data.strongly_short_text, topics: story.ai_topics || data.topics } : data;
-          if (!$("story-title").value.trim() && data.title) $("story-title").value = data.title;
-          if (!$("story-description").value.trim() && data.description) $("story-description").value = data.description;
-          if (!$("story-notes").value.trim() && data.notes) $("story-notes").value = data.notes;
-          activeAiView = "original"; $("ai-modal-status").textContent = "Analyse gespeichert. Original: " + wordCount(data.original_text) + " Wörter · ca. " + durationLabel(data.original_text) + " Vorlesezeit.";
+          activeAiResult = data;
+          // Bei einer erneuten Analyse alle KI-Felder durch das neue Ergebnis ersetzen.
+          if (data.title) $("story-title").value = data.title;
+          if (data.description) $("story-description").value = data.description;
+          if (data.notes) $("story-notes").value = data.notes;
+          activeAiView = "original"; $("ai-modal-status").textContent = "Neue Analyse gespeichert und alle KI-Fassungen überschrieben. Original: " + wordCount(data.original_text) + " Wörter · ca. " + durationLabel(data.original_text) + " Vorlesezeit.";
           renderAiTabs("ai-modal-tabs", "ai-modal-output", "ai-modal-topics", activeAiResult, "original"); $("ai-modal-result").classList.remove("hidden"); renderDetailAi();
         } else {
           pendingAiResult = data;
