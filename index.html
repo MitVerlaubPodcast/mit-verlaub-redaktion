@@ -1207,9 +1207,9 @@
     $("ai-modal-backdrop").addEventListener("click", event => { if (event.target === $("ai-modal-backdrop")) $("ai-modal-backdrop").classList.add("hidden"); });
     $("reanalyze-story-button").addEventListener("click", () => openAiModal(activeAiStoryId));
     $("process-ai-button").addEventListener("click", async () => {
-      const source = $("ai-source-text").value.trim(); const button = $("process-ai-button");
+      const source = $("ai-source-text").value; const button = $("process-ai-button");
       $("ai-modal-error").className = "hidden"; $("ai-modal-error").textContent = "";
-      if (source.length < 80) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Bitte füge den vollständigen Storytext ein (mindestens 80 Zeichen)."; return; }
+      if (source.trim().length < 80) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Bitte füge den vollständigen Storytext ein (mindestens 80 Zeichen)."; return; }
       if (source.length > 40000) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Der Text ist zu lang (maximal 40.000 Zeichen)."; return; }
       button.disabled = true; button.textContent = "Wird verarbeitet …";
       try {
