@@ -1170,7 +1170,7 @@
     function durationLabel(value) { return Math.max(1, Math.ceil(wordCount(value) / 140)) + " Min."; }
     function topicsText(topics) { return (topics || []).map((topic, index) => (index + 1) + ". " + topic).join("\n"); }
     function getAiViews(result) { return [
-      { id: "original", label: "Originaltext · " + durationLabel(result.original_text), text: result.original_text },
+      { id: "original", label: "Originaltext / deutsche Übersetzung · " + durationLabel(result.original_text), text: result.original_text },
       { id: "short", label: "Gekürzte Fassung · " + durationLabel(result.short_text), text: result.short_text },
       { id: "strong", label: "Stark gekürzt · " + durationLabel(result.strongly_short_text), text: result.strongly_short_text }
     ]; }
