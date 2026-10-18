@@ -135,7 +135,8 @@
     .story-detail-modal .detail-value a { overflow-wrap:anywhere; }
     .ai-modal-backdrop { position:fixed; inset:0; z-index:40; background:#0009; display:flex; align-items:center; justify-content:center; padding:18px; }
     .ai-modal { background:#fff; width:min(900px,100%); max-height:92vh; overflow:auto; border-radius:16px; padding:22px; box-shadow:0 12px 50px #0004; }
-    .ai-output-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .ai-output-tabs { display:flex; flex-direction:column; align-items:stretch; gap:8px; margin:12px 0; }
+    .ai-output-tabs button { width:100%; text-align:left; }
     .ai-output-tabs button.active { background:#222; color:#fff; }
     .ai-output { white-space:pre-wrap; overflow-wrap:anywhere; background:#f6f6f6; border-radius:8px; padding:14px; line-height:1.55; min-height:120px; }
     .ai-topics { margin-top:12px; padding:12px; border:1px solid #e5e5e5; border-radius:8px; white-space:pre-wrap; }
@@ -326,7 +327,7 @@
           <div class="field"><label for="ai-source-text">Vollständiger Reddit-Text</label><textarea id="ai-source-text" style="min-height:280px" placeholder="Gesamte Story hier einfügen …"></textarea></div>
           <div id="ai-modal-error" class="hidden" role="alert"></div>
           <div class="toolbar"><button id="process-ai-button" type="button">Verarbeiten</button></div>
-          <div id="ai-modal-result" class="hidden"><p id="ai-modal-status" class="muted"></p><div class="ai-output-tabs" id="ai-modal-tabs"></div><div id="ai-modal-output" class="ai-output"></div><div id="ai-modal-topics" class="ai-topics"></div><p class="muted">Die Laufzeit wird aus der Wortzahl berechnet. Die stark gekürzte Fassung ist nur eine interne Orientierungshilfe und nicht zum Vorlesen gedacht.</p></div>
+          <div id="ai-modal-result"><p id="ai-modal-status" class="muted"></p><div class="ai-output-tabs" id="ai-modal-tabs"></div><div id="ai-modal-output" class="ai-output hidden"></div><div id="ai-modal-topics" class="ai-topics hidden"></div><p class="muted">Die Laufzeit wird aus der Wortzahl berechnet. Die stark gekürzte Fassung ist nur eine interne Orientierungshilfe und nicht zum Vorlesen gedacht.</p></div>
         </div>
       </div>
 
@@ -388,11 +389,6 @@
             <label for="story-top-comments">Top-Kommentare · interne Orga</label>
             <textarea id="story-top-comments" placeholder="Links, Zitate oder Stichpunkte zu besonders guten Kommentaren …"></textarea>
             <p class="muted" style="margin:6px 0 0">Nur für eure interne Vorbereitung, nicht für die öffentliche Website.</p>
-          </div>
-          <div class="field">
-            <label for="story-translation-notes">Übersetzung / Arbeitsfassung · interne Orga</label>
-            <textarea id="story-translation-notes" style="min-height:220px" placeholder="Übersetzung, längere Textpassagen, offene Fragen oder weitere Arbeitsnotizen …"></textarea>
-            <p class="muted" style="margin:6px 0 0">Großes Freitextfeld für Übersetzungen und längere Arbeitsfassungen.</p>
           </div>
           <div class="toolbar">
             <button id="open-ai-analysis" type="button">✨ KI-Analyse</button>
@@ -631,7 +627,6 @@
       $('story-episode').value = '';
       $('story-episode-select').value = '';
       $('story-top-comments').value = '';
-      $('story-translation-notes').value = '';
       $('story-episode-field').classList.remove('hidden');
       $('story-category').value = 'Kurioses';
       $('story-language').value = 'de';
@@ -656,7 +651,6 @@
       $('story-status').value = s.status === 'recorded' ? 'recorded' : 'planned';
       $('story-notes').value = s.description ? (s.notes || '') : '';
       $('story-top-comments').value = s.top_comments || '';
-      $('story-translation-notes').value = s.translation_notes || '';
       $('editor-heading').textContent = 'Story bearbeiten';
       $('save-button').textContent = 'Änderungen speichern';
       $('cancel-edit').classList.remove('hidden');
@@ -1184,8 +1178,19 @@
     ]; }
     function renderAiTabs(tabsId, outputId, topicsId, result, view) {
       const tabs = $(tabsId); tabs.replaceChildren();
-      getAiViews(result).forEach(item => { const button = document.createElement("button"); button.type = "button"; button.className = item.id === view ? "active" : "secondary"; button.textContent = item.label; button.addEventListener("click", () => renderAiTabs(tabsId, outputId, topicsId, result, item.id)); tabs.append(button); });
-      const selected = getAiViews(result).find(item => item.id === view) || getAiViews(result)[0];
+      if (!result) {
+        [{label:"Originalfassung", id:"original"},{label:"Gekürzte Fassung", id:"short"},{label:"Stark gekürzte Fassung", id:"strong"}].forEach(item => {
+          const button = document.createElement("button"); button.type = "button"; button.className = "secondary"; button.disabled = true; button.textContent = item.label; tabs.append(button);
+        });
+        $(outputId).textContent = "";
+        $(outputId).classList.add("hidden");
+        if (topicsId) $(topicsId).classList.add("hidden");
+        return;
+      }
+      const views = getAiViews(result);
+      views.forEach(item => { const button = document.createElement("button"); button.type = "button"; button.className = item.id === view ? "active" : "secondary"; button.textContent = item.label; button.addEventListener("click", () => renderAiTabs(tabsId, outputId, topicsId, result, item.id)); tabs.append(button); });
+      const selected = views.find(item => item.id === view) || views[0];
+      $(outputId).classList.remove("hidden");
       $(outputId).textContent = selected.text || "Keine Fassung vorhanden.";
       if (view === "strong") { $(outputId).style.border = "2px solid #e5b94c"; $(outputId).style.background = "#fff9e9"; } else { $(outputId).style.border = ""; $(outputId).style.background = ""; }
       if (topicsId) { const topics = $(topicsId); if (view === "strong") { topics.classList.add("hidden"); topics.textContent = ""; } else { topics.classList.remove("hidden"); topics.textContent = "Spannende Unterthemen\n" + (result.topics?.length ? topicsText(result.topics) : "Keine Unterthemen zurückgegeben."); } }
@@ -1200,7 +1205,7 @@
       const story = activeAiStoryId ? stories.find(item => item.id === activeAiStoryId) : null;
       if (story?.ai_source_text) { if (!window.confirm("Für diese Story gibt es bereits eine KI-Analyse. Eine erneute Verarbeitung überschreibt die gespeicherten KI-Fassungen. Möchtest du fortfahren?")) return; $("ai-source-text").value = story.ai_source_text; }
       else if (pendingAiSource) $("ai-source-text").value = pendingAiSource; else $("ai-source-text").value = "";
-      $("ai-modal-error").className = "hidden"; $("ai-modal-error").textContent = ""; $("ai-modal-result").classList.add("hidden"); $("ai-modal-backdrop").classList.remove("hidden"); $("ai-source-text").focus();
+      $("ai-modal-error").className = "hidden"; $("ai-modal-error").textContent = ""; $("ai-modal-status").textContent = ""; $("ai-modal-result").classList.remove("hidden"); renderAiTabs("ai-modal-tabs", "ai-modal-output", "ai-modal-topics", null, "original"); $("ai-modal-backdrop").classList.remove("hidden"); $("ai-source-text").focus();
     }
     $("open-ai-analysis").addEventListener("click", () => openAiModal($("story-id").value || null));
     $("close-ai-modal").addEventListener("click", () => $("ai-modal-backdrop").classList.add("hidden"));
@@ -1230,7 +1235,6 @@
           if (!$("story-title").value.trim()) $("story-title").value = data.title || "";
           if (!$("story-description").value.trim()) $("story-description").value = data.description || "";
           if (!$("story-notes").value.trim()) $("story-notes").value = data.notes || "";
-          if (!$("story-translation-notes").value.trim()) $("story-translation-notes").value = data.short_text || "";
           $("story-language").value = data.language || "other";
           $("ai-modal-status").textContent = "Vorschau erstellt. Titel, Vorschautext und Notizen wurden nur ausgefüllt, wenn sie leer waren. Fülle den Reddit-Link aus und speichere die Story, um die Fassungen dauerhaft zu sichern.";
           renderAiTabs("ai-modal-tabs", "ai-modal-output", "ai-modal-topics", data, "original"); $("ai-modal-result").classList.remove("hidden");
@@ -1309,7 +1313,6 @@
         description: $('story-description').value.trim(),
         notes: $('story-notes').value.trim(),
         top_comments: $('story-top-comments').value.trim(),
-        translation_notes: $('story-translation-notes').value.trim(),
         updated_at: new Date().toISOString()
       };
       if (pendingAiResult) {
