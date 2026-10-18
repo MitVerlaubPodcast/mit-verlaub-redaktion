@@ -308,7 +308,6 @@
           <div class="detail-label">Sprache der Originalstory</div><div id="detail-language" class="detail-value"></div>
           <div class="detail-label">Notizen für die Aufnahme</div><div id="detail-notes" class="detail-value"></div>
           <div class="detail-label">Top-Kommentare · nur intern</div><div id="detail-top-comments" class="detail-value"></div>
-          <div class="detail-label">Übersetzung / Arbeitsfassung · nur intern</div><div id="detail-translation-notes" class="detail-value"></div>
           <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
           <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
           <div id="detail-ai-section" class="hidden">
@@ -878,7 +877,6 @@
       $('detail-language').textContent = story.language === 'en' ? 'Englisch' : story.language === 'de' ? 'Deutsch' : 'Andere Sprache';
       $('detail-notes').textContent = story.notes || 'Keine Notizen für die Aufnahme hinterlegt.';
       $('detail-top-comments').textContent = story.top_comments || 'Noch keine Top-Kommentare gesammelt.';
-      $('detail-translation-notes').textContent = story.translation_notes || 'Noch keine Übersetzung oder Arbeitsfassung hinterlegt.';
       $('detail-reddit').replaceChildren();
       if (story.reddit_url) {
         const anchor = document.createElement('a');
