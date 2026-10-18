@@ -133,6 +133,12 @@
     .story-detail-modal .detail-value { white-space:pre-wrap; overflow-wrap:anywhere; background:#f6f6f6; border-radius:8px; padding:10px 12px; margin:6px 0 14px; line-height:1.45; }
     .story-detail-modal .detail-label { color:#666; font-size:12px; font-weight:bold; margin-top:12px; }
     .story-detail-modal .detail-value a { overflow-wrap:anywhere; }
+    .ai-modal-backdrop { position:fixed; inset:0; z-index:40; background:#0009; display:flex; align-items:center; justify-content:center; padding:18px; }
+    .ai-modal { background:#fff; width:min(900px,100%); max-height:92vh; overflow:auto; border-radius:16px; padding:22px; box-shadow:0 12px 50px #0004; }
+    .ai-output-tabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+    .ai-output-tabs button.active { background:#222; color:#fff; }
+    .ai-output { white-space:pre-wrap; overflow-wrap:anywhere; background:#f6f6f6; border-radius:8px; padding:14px; line-height:1.55; min-height:120px; }
+    .ai-topics { margin-top:12px; padding:12px; border:1px solid #e5e5e5; border-radius:8px; white-space:pre-wrap; }
     .story-detail-actions { position:sticky; bottom:-22px; display:flex; justify-content:flex-end; gap:8px; margin:22px -22px -22px; padding:14px 22px; border-top:1px solid #e5e5e5; background:rgba(255,255,255,.97); border-radius:0 0 14px 14px; }
     .story-detail-actions button { margin:0; }
     .story-detail-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
@@ -304,7 +310,23 @@
           <div class="detail-label">Übersetzung / Arbeitsfassung · nur intern</div><div id="detail-translation-notes" class="detail-value"></div>
           <div class="detail-label">Reddit-Link</div><div id="detail-reddit" class="detail-value"></div>
           <div class="detail-label">Story eingetragen von</div><div id="detail-author" class="detail-value"></div>
+          <div id="detail-ai-section" class="hidden">
+            <div class="detail-label">KI-Arbeitsfassungen · intern</div><div class="ai-output-tabs" id="detail-ai-tabs"></div>
+            <div id="detail-ai-output" class="ai-output"></div><div id="detail-ai-topics" class="ai-topics"></div><p class="muted" id="detail-ai-meta"></p>
+            <button id="reanalyze-story-button" type="button" class="secondary">KI-Analyse erneut ausführen</button>
+          </div>
           <div class="story-detail-actions"><button id="edit-story-from-detail" type="button">Story bearbeiten</button></div>
+        </div>
+      </div>
+
+      <div id="ai-modal-backdrop" class="ai-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
+        <div class="ai-modal">
+          <div class="topbar"><div><div class="section-kicker" style="margin-top:0">Redaktionswerkzeug</div><h2 id="ai-modal-title" style="margin:0">KI-Analyse der Reddit-Story</h2></div><button id="close-ai-modal" type="button" class="secondary">Schließen ✕</button></div>
+          <p class="muted">Füge den vollständigen Storytext ein. Die KI ruft Reddit nicht selbst ab. Bei einer neuen Story wird das Ergebnis erst mit „Story speichern“ dauerhaft gespeichert; dafür brauchst du weiterhin den Reddit-Link.</p>
+          <div class="field"><label for="ai-source-text">Vollständiger Reddit-Text</label><textarea id="ai-source-text" style="min-height:280px" placeholder="Gesamte Story hier einfügen …"></textarea></div>
+          <div id="ai-modal-error" class="hidden" role="alert"></div>
+          <div class="toolbar"><button id="process-ai-button" type="button">Verarbeiten</button></div>
+          <div id="ai-modal-result" class="hidden"><p id="ai-modal-status" class="muted"></p><div class="ai-output-tabs" id="ai-modal-tabs"></div><div id="ai-modal-output" class="ai-output"></div><div id="ai-modal-topics" class="ai-topics"></div><p class="muted">Die Laufzeit wird aus der Wortzahl berechnet. Die stark gekürzte Fassung ist nur eine interne Orientierungshilfe und nicht zum Vorlesen gedacht.</p></div>
         </div>
       </div>
 
@@ -373,6 +395,7 @@
             <p class="muted" style="margin:6px 0 0">Großes Freitextfeld für Übersetzungen und längere Arbeitsfassungen.</p>
           </div>
           <div class="toolbar">
+            <button id="open-ai-analysis" type="button" class="secondary">KI-Analyse</button>
             <button id="save-button" type="submit">Story speichern</button>
             <button id="cancel-edit" class="secondary hidden" type="button">Bearbeitung abbrechen</button>
           </div>
@@ -434,6 +457,11 @@
     let currentUser = null;
     let activeEpisode = null;
     let episodeLinkRows = [];
+    let pendingAiResult = null;
+    let pendingAiSource = "";
+    let activeAiResult = null;
+    let activeAiView = "original";
+    let activeAiStoryId = null;
 
     const statusNames = {
       draft: 'Entwurf',
@@ -870,6 +898,10 @@
       }
       const author = story.created_by_email || (story.created_by === currentUser?.id ? currentUser.email : 'Unbekannt');
       $('detail-author').textContent = author || 'Unbekannt';
+      activeAiStoryId = storyId;
+      activeAiResult = story.ai_original_text ? { original_text: story.ai_original_text, short_text: story.ai_short_text || "", strongly_short_text: story.ai_strongly_short_text || "", topics: Array.isArray(story.ai_topics) ? story.ai_topics : [], source_text: story.ai_source_text || "", language: story.language || "other" } : null;
+      activeAiView = "original";
+      renderDetailAi();
       $('edit-story-from-detail').dataset.storyId = storyId;
       $('story-detail-backdrop').classList.remove('hidden');
     }
@@ -1141,6 +1173,72 @@
       await loadEpisodes();
     }
 
+
+    function wordCount(value) { return String(value || "").trim().split(/\s+/).filter(Boolean).length; }
+    function durationLabel(value) { return Math.max(1, Math.ceil(wordCount(value) / 140)) + " Min."; }
+    function topicsText(topics) { return (topics || []).map((topic, index) => (index + 1) + ". " + topic).join("\n"); }
+    function getAiViews(result) { return [
+      { id: "original", label: "Originaltext · " + durationLabel(result.original_text), text: result.original_text },
+      { id: "short", label: "Gekürzte Fassung · " + durationLabel(result.short_text), text: result.short_text },
+      { id: "strong", label: "Stark gekürzt · " + durationLabel(result.strongly_short_text), text: result.strongly_short_text }
+    ]; }
+    function renderAiTabs(tabsId, outputId, topicsId, result, view) {
+      const tabs = $(tabsId); tabs.replaceChildren();
+      getAiViews(result).forEach(item => { const button = document.createElement("button"); button.type = "button"; button.className = item.id === view ? "active" : "secondary"; button.textContent = item.label; button.addEventListener("click", () => renderAiTabs(tabsId, outputId, topicsId, result, item.id)); tabs.append(button); });
+      const selected = getAiViews(result).find(item => item.id === view) || getAiViews(result)[0];
+      $(outputId).textContent = selected.text || "Keine Fassung vorhanden.";
+      if (view === "strong") { $(outputId).style.border = "2px solid #e5b94c"; $(outputId).style.background = "#fff9e9"; } else { $(outputId).style.border = ""; $(outputId).style.background = ""; }
+      if (topicsId) { const topics = $(topicsId); if (view === "strong") { topics.classList.add("hidden"); topics.textContent = ""; } else { topics.classList.remove("hidden"); topics.textContent = "Spannende Unterthemen\n" + (result.topics?.length ? topicsText(result.topics) : "Keine Unterthemen zurückgegeben."); } }
+    }
+    function renderDetailAi() {
+      const section = $("detail-ai-section"); if (!activeAiResult) { section.classList.add("hidden"); return; }
+      section.classList.remove("hidden"); renderAiTabs("detail-ai-tabs", "detail-ai-output", "detail-ai-topics", activeAiResult, activeAiView);
+      $("detail-ai-meta").textContent = "Originaltext: " + wordCount(activeAiResult.original_text) + " Wörter · ca. " + durationLabel(activeAiResult.original_text) + " Vorlesezeit. Die stark gekürzte Fassung ist nur intern.";
+    }
+    function openAiModal(storyId) {
+      activeAiStoryId = storyId || $("story-id").value || null;
+      const story = activeAiStoryId ? stories.find(item => item.id === activeAiStoryId) : null;
+      if (story?.ai_source_text) { if (!window.confirm("Für diese Story gibt es bereits eine KI-Analyse. Eine erneute Verarbeitung überschreibt die gespeicherten KI-Fassungen. Möchtest du fortfahren?")) return; $("ai-source-text").value = story.ai_source_text; }
+      else if (pendingAiSource) $("ai-source-text").value = pendingAiSource; else $("ai-source-text").value = "";
+      $("ai-modal-error").className = "hidden"; $("ai-modal-error").textContent = ""; $("ai-modal-result").classList.add("hidden"); $("ai-modal-backdrop").classList.remove("hidden"); $("ai-source-text").focus();
+    }
+    $("open-ai-analysis").addEventListener("click", () => openAiModal($("story-id").value || null));
+    $("close-ai-modal").addEventListener("click", () => $("ai-modal-backdrop").classList.add("hidden"));
+    $("ai-modal-backdrop").addEventListener("click", event => { if (event.target === $("ai-modal-backdrop")) $("ai-modal-backdrop").classList.add("hidden"); });
+    $("reanalyze-story-button").addEventListener("click", () => openAiModal(activeAiStoryId));
+    $("process-ai-button").addEventListener("click", async () => {
+      const source = $("ai-source-text").value.trim(); const button = $("process-ai-button");
+      $("ai-modal-error").className = "hidden"; $("ai-modal-error").textContent = "";
+      if (source.length < 80) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Bitte füge den vollständigen Storytext ein (mindestens 80 Zeichen)."; return; }
+      if (source.length > 40000) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Der Text ist zu lang (maximal 40.000 Zeichen)."; return; }
+      button.disabled = true; button.textContent = "Wird verarbeitet …";
+      try {
+        const { data, error } = await db.functions.invoke("analyze-story", { body: { source_text: source, story_id: activeAiStoryId || undefined } });
+        if (error) throw new Error(data?.error || error.message || "KI-Verarbeitung fehlgeschlagen.");
+        if (data?.error) throw new Error(data.error);
+        pendingAiSource = source;
+        if (activeAiStoryId) {
+          await loadStories(); const story = stories.find(item => item.id === activeAiStoryId);
+          activeAiResult = story ? { original_text: story.ai_original_text || data.original_text, short_text: story.ai_short_text || data.short_text, strongly_short_text: story.ai_strongly_short_text || data.strongly_short_text, topics: story.ai_topics || data.topics } : data;
+          if (!$("story-title").value.trim() && data.title) $("story-title").value = data.title;
+          if (!$("story-description").value.trim() && data.description) $("story-description").value = data.description;
+          if (!$("story-notes").value.trim() && data.notes) $("story-notes").value = data.notes;
+          activeAiView = "original"; $("ai-modal-status").textContent = "Analyse gespeichert. Original: " + wordCount(data.original_text) + " Wörter · ca. " + durationLabel(data.original_text) + " Vorlesezeit.";
+          renderAiTabs("ai-modal-tabs", "ai-modal-output", "ai-modal-topics", activeAiResult, "original"); $("ai-modal-result").classList.remove("hidden"); renderDetailAi();
+        } else {
+          pendingAiResult = data;
+          if (!$("story-title").value.trim()) $("story-title").value = data.title || "";
+          if (!$("story-description").value.trim()) $("story-description").value = data.description || "";
+          if (!$("story-notes").value.trim()) $("story-notes").value = data.notes || "";
+          if (!$("story-translation-notes").value.trim()) $("story-translation-notes").value = data.short_text || "";
+          $("story-language").value = data.language || "other";
+          $("ai-modal-status").textContent = "Vorschau erstellt. Titel, Vorschautext und Notizen wurden nur ausgefüllt, wenn sie leer waren. Fülle den Reddit-Link aus und speichere die Story, um die Fassungen dauerhaft zu sichern.";
+          renderAiTabs("ai-modal-tabs", "ai-modal-output", "ai-modal-topics", data, "original"); $("ai-modal-result").classList.remove("hidden");
+        }
+      } catch (error) { $("ai-modal-error").className = "message error"; $("ai-modal-error").textContent = "Verarbeitung fehlgeschlagen: " + (error?.message || "Unbekannter Fehler") + " Deine Texteingabe bleibt erhalten."; }
+      finally { button.disabled = false; button.textContent = "Verarbeiten"; }
+    });
+
     $('login-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       clearMessage();
@@ -1214,6 +1312,13 @@
         translation_notes: $('story-translation-notes').value.trim(),
         updated_at: new Date().toISOString()
       };
+      if (pendingAiResult) {
+        payload.ai_source_text = pendingAiSource; payload.ai_original_text = pendingAiResult.original_text; payload.ai_short_text = pendingAiResult.short_text;
+        payload.ai_strongly_short_text = pendingAiResult.strongly_short_text; payload.ai_topics = pendingAiResult.topics || [];
+        payload.ai_analysis_status = "completed"; payload.ai_analysis_error = null; payload.ai_analyzed_at = new Date().toISOString();
+        payload.story_word_count = wordCount(pendingAiResult.original_text); payload.story_reading_minutes = Math.max(1, Math.ceil(wordCount(pendingAiResult.original_text) / 220));
+        payload.story_read_aloud_minutes = Math.max(1, Math.ceil(wordCount(pendingAiResult.original_text) / 140));
+      }
       if (!id) {
         payload.episode_number = null;
         payload.status = 'planned';
@@ -1278,6 +1383,7 @@
         }
       }
 
+      pendingAiResult = null; pendingAiSource = "";
       resetForm();
       await loadAll();
       showHomeView('database');
